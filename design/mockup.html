@@ -1,0 +1,476 @@
+<title>Hark Desktop Plan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one capped column. The working app mock leads; the plan follows as short sections under it. */
+:root{
+  --bg:#f2f5f8; --surface:#ffffff; --surface-2:#e9eef3; --line:#d3dae2;
+  --fg:#15202b; --fg-2:#4a5968;
+  --accent:#0a6a8f; --accent-fg:#ffffff; --accent-soft:#dcedf5;
+  --ok:#17794a; --ok-soft:#dff3e7; --warn:#8f5400; --warn-soft:#fbecd2; --err:#b3261e; --err-soft:#fbe3e1;
+  --shadow:0 18px 40px -18px rgba(21,32,43,.35);
+  --ui:"Instrument Sans","Segoe UI Variable","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+  --r-1:6px; --r-2:10px; --r-3:14px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e141a; --surface:#161f28; --surface-2:#1e2933; --line:#2c3946;
+  --fg:#e6edf3; --fg-2:#a3b3c2;
+  --accent:#5cc4e8; --accent-fg:#06222e; --accent-soft:#12384a;
+  --ok:#5fd08d; --ok-soft:#143424; --warn:#f0b455; --warn-soft:#3a2a0c; --err:#ff8a80; --err-soft:#42191a;
+  --shadow:0 18px 40px -18px rgba(0,0,0,.7); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0e141a; --surface:#161f28; --surface-2:#1e2933; --line:#2c3946;
+  --fg:#e6edf3; --fg-2:#a3b3c2;
+  --accent:#5cc4e8; --accent-fg:#06222e; --accent-soft:#12384a;
+  --ok:#5fd08d; --ok-soft:#143424; --warn:#f0b455; --warn-soft:#3a2a0c; --err:#ff8a80; --err-soft:#42191a;
+  --shadow:0 18px 40px -18px rgba(0,0,0,.7); color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{overflow-x:clip}
+body{background:var(--bg);color:var(--fg);font:400 15px/1.5 var(--ui);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 72px}
+::selection{background:var(--accent);color:var(--accent-fg)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3,p{margin:0}
+h1{font:700 clamp(28px,4.4vw,40px)/1.1 var(--ui);letter-spacing:-.02em;text-wrap:balance}
+h2{font:700 22px/1.2 var(--ui);letter-spacing:-.01em;text-wrap:balance}
+h3{font:600 15px/1.3 var(--ui)}
+.lede{color:var(--fg-2);max-width:62ch;font-size:16px}
+.small{font-size:13px;color:var(--fg-2)}
+code,.mono{font-family:var(--mono);font-size:.9em}
+.icon{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+button,select,input{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-1);padding:6px 12px;cursor:pointer;font-weight:500;font-size:13px;display:inline-flex;align-items:center;gap:6px;transition:background-color .15s}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.err{background:var(--err-soft);color:var(--err)} .pill.info{background:var(--accent-soft);color:var(--accent)}
+.pill.mute{background:var(--surface-2);color:var(--fg-2)}
+
+header.top{display:flex;flex-direction:column;gap:12px}
+
+/* ---------- mock stage ---------- */
+.stage{display:flex;flex-direction:column;gap:14px}
+.stagebar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface);padding:3px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:7px;padding:5px 11px;font-size:13px;font-weight:500;cursor:pointer;color:var(--fg-2)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.app{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-3);box-shadow:var(--shadow);overflow:hidden;display:grid;grid-template-rows:auto 1fr}
+.titlebar{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 14px;border-bottom:1px solid var(--line);background:var(--surface-2);min-width:0}
+.titlebar .name{font-weight:700;letter-spacing:-.01em}
+.titlebar .grow{flex:1;min-width:0}
+.winbtns{display:flex;gap:2px;color:var(--fg-2)}
+.winbtns span{width:34px;height:26px;display:grid;place-items:center;border-radius:4px}
+.winbtns svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.3}
+.appbody{display:grid;grid-template-columns:190px minmax(0,1fr);min-height:600px}
+.rail{border-right:1px solid var(--line);padding:12px 8px;display:flex;flex-direction:column;gap:4px;background:var(--surface-2)}
+.rail button{display:flex;align-items:center;gap:10px;border:0;background:transparent;border-radius:var(--r-1);padding:8px 10px;cursor:pointer;font-weight:500;text-align:left;color:var(--fg-2)}
+.rail button:hover{color:var(--fg)}
+.rail button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.rail .acct{margin-top:auto;padding:10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--fg-2)}
+.meter{height:5px;border-radius:9px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;width:38%;background:var(--accent)}
+.view{display:flex;flex-direction:column;min-width:0}
+.viewhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 18px;border-bottom:1px solid var(--line)}
+.viewhead h3{flex:1;min-width:0;font-size:15px}
+select,input[type=text],input[type=password],input[type=search]{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-1);padding:6px 9px;font-size:13px;min-width:0}
+.scroll{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:16px;max-height:520px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+
+/* chat */
+.msg{display:flex;flex-direction:column;gap:6px;max-width:68ch}
+.msg.user{align-self:flex-end;align-items:flex-end}
+.msg.user .bubble{background:var(--accent-soft);border-radius:var(--r-3) var(--r-3) 4px var(--r-3);padding:8px 13px}
+.msg .who{font-size:12px;color:var(--fg-2);display:flex;gap:6px;align-items:center}
+.msg .who .icon{width:14px;height:14px}
+.tool{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--fg-2);border:1px dashed var(--line);border-radius:var(--r-1);padding:6px 10px}
+.tool b{color:var(--fg);font-weight:600}
+table.items{border-collapse:collapse;font-size:13px;width:100%}
+table.items td{padding:6px 10px 6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+table.items td:first-child{font-family:var(--mono);color:var(--fg-2);white-space:nowrap}
+.tablebox{overflow-x:auto}
+.ask{border:1px solid var(--line);border-radius:var(--r-2);padding:12px 14px;display:flex;flex-direction:column;gap:10px;background:var(--surface-2)}
+.ask .row{display:flex;flex-wrap:wrap;gap:8px}
+.composer{border-top:1px solid var(--line);padding:12px 18px;display:flex;gap:10px;align-items:center}
+.composer input{flex:1;padding:10px 12px;font-size:14px}
+.micbtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;flex:none}
+.voicebox{flex:1;display:none;align-items:center;gap:12px;min-width:0;border:1px solid var(--accent);border-radius:var(--r-1);padding:8px 12px;background:var(--accent-soft)}
+.voicebox .txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.wave{display:flex;align-items:center;gap:3px;height:22px;flex:none}
+.wave i{width:3px;height:100%;border-radius:2px;background:var(--accent);transform:scaleY(.25);animation:wv 1s ease-in-out infinite}
+.wave i:nth-child(2){animation-delay:.12s}.wave i:nth-child(3){animation-delay:.24s}.wave i:nth-child(4){animation-delay:.36s}.wave i:nth-child(5){animation-delay:.48s}
+@keyframes wv{50%{transform:scaleY(1)}}
+.app[data-voice="think"] .wave i{animation-duration:2s;opacity:.6}
+.app:not([data-voice="idle"]) .composer input,.app:not([data-voice="idle"]) .composer .send{display:none}
+.app:not([data-voice="idle"]) .voicebox{display:flex}
+.app:not([data-voice="idle"]) .micbtn{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+@media (prefers-reduced-motion: reduce){.wave i{animation:none;transform:scaleY(.6)}}
+
+/* history */
+.hgroup{display:flex;flex-direction:column}
+.hgroup>span{font-size:12px;font-weight:600;color:var(--fg-2);padding-bottom:4px}
+.hrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 14px;padding:10px 8px;border-bottom:1px solid var(--line);border-radius:var(--r-1);cursor:pointer;text-align:left;background:transparent;border-width:0 0 1px;border-style:solid;border-color:var(--line);width:100%}
+.hrow:hover{background:var(--surface-2)}
+.hrow b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hrow .snip{grid-column:1;color:var(--fg-2);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hrow .meta{grid-row:1/3;grid-column:2;text-align:right;font-size:12px;color:var(--fg-2);display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+
+/* connections + settings */
+.sect{display:flex;flex-direction:column;gap:10px}
+.sect>header{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.sect>header h3{flex:1;min-width:0}
+.rows{border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden}
+.crow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.crow:last-child{border-bottom:0}
+.crow .main{flex:1;min-width:180px;display:flex;flex-direction:column}
+.crow .main span{font-size:12px;color:var(--fg-2)}
+.field{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.field:last-child{border-bottom:0}
+.field label{flex:1;min-width:170px;display:flex;flex-direction:column;font-weight:500}
+.field label span{font-size:12px;color:var(--fg-2);font-weight:400}
+.field input[type=text],.field select{width:210px;max-width:100%}
+.sw{appearance:none;width:36px;height:20px;border-radius:20px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background-color .15s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--surface);transition:transform .15s}
+.sw:checked{background:var(--accent)} .sw:checked::after{transform:translateX(16px)}
+pre.cfg{margin:0;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-2);padding:12px;font:400 12.5px/1.55 var(--mono);overflow-x:auto}
+[role=tabpanel]{display:none} [role=tabpanel].on{display:flex}
+
+.float{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:center}
+.orb{display:inline-flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:8px 18px 8px 10px;box-shadow:var(--shadow);max-width:100%}
+.orb .dot{width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;flex:none}
+.orb .t{min-width:0;display:flex;flex-direction:column;font-size:13px}
+.orb .t span{color:var(--fg-2);font-size:12px}
+
+/* ---------- plan ---------- */
+section.plan{display:flex;flex-direction:column;gap:16px}
+.flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.col{border:1px solid var(--line);border-radius:var(--r-3);padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--surface)}
+.col.mid{border-color:var(--accent)}
+.node{background:var(--surface-2);border-radius:var(--r-1);padding:7px 10px;font-size:13px}
+.node b{display:block;font-weight:600}
+.node span{color:var(--fg-2);font-size:12px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-3);background:var(--surface)}
+.tbl table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+.tbl th{text-align:left;font-weight:600;font-size:13px;color:var(--fg-2);padding:10px 14px;border-bottom:1px solid var(--line)}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td:first-child{font-weight:600;white-space:nowrap}
+.tbl td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+ol.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r-3);background:var(--surface)}
+ol.steps li{display:grid;grid-template-columns:150px minmax(0,1fr);gap:4px 18px;padding:12px 16px;border-bottom:1px solid var(--line)}
+ol.steps li:last-child{border-bottom:0}
+ol.steps b{font-weight:600}
+ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-width:75ch}
+@media (max-width:760px){
+  .appbody{grid-template-columns:minmax(0,1fr)}
+  .rail{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line)}
+  .rail .acct{display:none}
+  .flow{grid-template-columns:minmax(0,1fr)}
+  ol.steps li{grid-template-columns:minmax(0,1fr)}
+  .titlebar .pill{display:none}
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+  <symbol id="i-hist" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12l16-7-6 16-3-6z"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="14" r="4"/><path d="M11 11l9-9M16 6l3 3"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Hark, a voice and chat desktop app for your Copilot tools</h1>
+    <p class="lede">A Windows app that sits in the tray, wakes on “Hey Chat”, and runs your prompts through GitHub Copilot with your Azure DevOps and Purview MCP tools. No VS Code needed. “Hark” is a working name. The mock below is clickable; all data in it is example data.</p>
+  </header>
+
+  <section class="stage" aria-label="Application mock">
+    <div class="stagebar">
+      <div class="seg" role="group" aria-label="Voice state to preview">
+        <button type="button" data-v="idle" aria-pressed="true">Idle</button>
+        <button type="button" data-v="listen" aria-pressed="false">Heard “Hey Chat”</button>
+        <button type="button" data-v="think" aria-pressed="false">Working</button>
+        <button type="button" data-v="speak" aria-pressed="false">Speaking</button>
+      </div>
+      <span class="small">Switch voice states here. Use the left menu inside the app to change tabs.</span>
+    </div>
+
+    <div class="app" id="app" data-voice="idle">
+      <div class="titlebar">
+        <span class="name">Hark</span>
+        <span class="pill info" id="wakechip"><svg class="icon" style="width:13px;height:13px"><use href="#i-mic"/></svg><span id="wakechiptxt">Waiting for “Hey Chat”</span></span>
+        <span class="grow"></span>
+        <div class="winbtns" aria-hidden="true">
+          <span><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></span>
+          <span><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg></span>
+          <span><svg viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg></span>
+        </div>
+      </div>
+      <div class="appbody">
+        <nav class="rail" role="tablist" aria-label="App sections">
+          <button role="tab" aria-selected="true" data-tab="chat"><svg class="icon"><use href="#i-chat"/></svg>Chat</button>
+          <button role="tab" aria-selected="false" data-tab="history"><svg class="icon"><use href="#i-hist"/></svg>History</button>
+          <button role="tab" aria-selected="false" data-tab="conn"><svg class="icon"><use href="#i-plug"/></svg>Connections</button>
+          <button role="tab" aria-selected="false" data-tab="settings"><svg class="icon"><use href="#i-gear"/></svg>Settings</button>
+          <div class="acct">
+            <span><b style="color:var(--fg)">GitHub Copilot</b><br>Signed in with your PAT</span>
+            <div class="meter" aria-label="Example: 38 percent of monthly allowance used"><i></i></div>
+            <span>38% of monthly allowance used</span>
+          </div>
+        </nav>
+
+        <!-- CHAT -->
+        <div class="view on" role="tabpanel" id="p-chat">
+          <div class="viewhead">
+            <h3>Ingestion pipeline: sprint status</h3>
+            <label class="small" for="model">Model</label>
+            <select id="model">
+              <option>Auto</option><option selected>Claude Sonnet 4.5 (1x)</option><option>GPT-5 (1x)</option><option>GPT-5 mini (0x)</option>
+            </select>
+            <button class="btn" type="button">New chat</button>
+          </div>
+          <div class="scroll">
+            <div class="msg user">
+              <span class="who"><svg class="icon"><use href="#i-mic"/></svg>You, by voice</span>
+              <div class="bubble">What is still open on the ingestion pipeline repo this sprint?</div>
+            </div>
+            <div class="msg">
+              <div class="tool"><span class="pill ok">Done</span><span><b>azure-devops</b> ran <span class="mono">search_work_items</span></span><span>1.2 s</span></div>
+              <p>Three items are still open in Sprint 42:</p>
+              <div class="tablebox"><table class="items">
+                <tr><td>#4812</td><td>Null schema crashes the bronze loader</td><td><span class="pill err">Bug</span></td></tr>
+                <tr><td>#4790</td><td>Add retry policy to the blob trigger</td><td><span class="pill info">Task</span></td></tr>
+                <tr><td>#4755</td><td>Backfill job for March partitions</td><td><span class="pill info">Task</span></td></tr>
+              </table></div>
+            </div>
+            <div class="msg user">
+              <span class="who">You, typed</span>
+              <div class="bubble">Who owns the customer_orders asset in Purview, and file a bug for the retry gap assigned to me.</div>
+            </div>
+            <div class="msg" style="max-width:none">
+              <div class="ask">
+                <div><b>Purview needs a Microsoft sign-in</b><br><span class="small">No valid token for contoso.com. Your browser opens, you sign in, and the token is kept encrypted on this PC until it expires.</span></div>
+                <div class="row"><button class="btn primary" type="button">Sign in with Microsoft</button><button class="btn" type="button">Skip Purview for now</button></div>
+              </div>
+              <div class="ask">
+                <div><b>Allow azure-devops to create a work item?</b><br><span class="small">Bug “Blob trigger has no retry policy”, assigned to you, in Data Platform.</span></div>
+                <div class="row"><button class="btn primary" type="button">Allow once</button><button class="btn" type="button">Always allow this tool</button><button class="btn" type="button">Deny</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="composer">
+            <button class="micbtn" type="button" aria-label="Talk"><svg class="icon"><use href="#i-mic"/></svg></button>
+            <input id="prompt" type="text" placeholder="Ask anything, or say “Hey Chat”" aria-label="Message">
+            <div class="voicebox" aria-live="polite">
+              <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+              <span class="txt" id="voicetxt">Listening…</span>
+            </div>
+            <button class="btn primary send" type="button"><svg class="icon" style="width:15px;height:15px"><use href="#i-send"/></svg>Send</button>
+          </div>
+        </div>
+
+        <!-- HISTORY -->
+        <div class="view" role="tabpanel" id="p-history">
+          <div class="viewhead">
+            <h3>History</h3>
+            <input id="hsearch" type="search" placeholder="Search chats" aria-label="Search chats">
+          </div>
+          <div class="scroll">
+            <div class="hgroup"><span>Today</span>
+              <button class="hrow" type="button"><b>Ingestion pipeline: sprint status</b><span class="snip">Three items are still open in Sprint 42…</span><span class="meta">10:42<span class="pill mute">Voice</span></span></button>
+              <button class="hrow" type="button"><b>Lineage for customer_orders</b><span class="snip">The asset is fed by two Synapse pipelines…</span><span class="meta">09:15<span class="pill mute">Typed</span></span></button>
+            </div>
+            <div class="hgroup"><span>Yesterday</span>
+              <button class="hrow" type="button"><b>Where is the retry logic for the blob trigger?</b><span class="snip">It lives in src/triggers/blob.py, lines 40 to 88…</span><span class="meta">16:30<span class="pill mute">Typed</span></span></button>
+              <button class="hrow" type="button"><b>Create bugs from the standup notes</b><span class="snip">Created 4 bugs and linked them to feature #4701…</span><span class="meta">11:05<span class="pill mute">Voice</span></span></button>
+            </div>
+            <div class="hgroup"><span>Earlier this month</span>
+              <button class="hrow" type="button"><b>Sensitivity labels on the finance lake</b><span class="snip">12 assets carry the Confidential label…</span><span class="meta">3 Nov<span class="pill mute">Typed</span></span></button>
+            </div>
+            <p class="small">Chats are stored on this PC only. Opening one continues it with its full context.</p>
+          </div>
+        </div>
+
+        <!-- CONNECTIONS -->
+        <div class="view" role="tabpanel" id="p-conn">
+          <div class="viewhead"><h3>Connections</h3><span class="small">Secrets are encrypted with Windows and never written to config files.</span></div>
+          <div class="scroll">
+            <div class="sect">
+              <header><h3>GitHub Copilot</h3><span class="pill ok">Verified</span></header>
+              <div class="rows">
+                <div class="crow"><svg class="icon"><use href="#i-key"/></svg><div class="main"><b>Fine-grained PAT</b><span class="mono">github_pat_••••••••••••7Qk2, expires 14 Feb 2027</span></div><button class="btn" type="button">Replace</button><button class="btn" type="button">Test</button></div>
+              </div>
+            </div>
+            <div class="sect">
+              <header><h3>Azure DevOps</h3><span class="pill ok">Connected</span></header>
+              <div class="rows">
+                <div class="crow"><svg class="icon"><use href="#i-key"/></svg><div class="main"><b>dev.azure.com/contoso</b><span class="mono">PAT ••••••••h3Lp, expires in 21 days</span></div><button class="btn" type="button">Replace</button><button class="btn" type="button">Test</button></div>
+              </div>
+            </div>
+            <div class="sect">
+              <header><h3>Microsoft accounts</h3><button class="btn primary" type="button">Add account</button></header>
+              <div class="rows">
+                <div class="crow"><div class="main"><b>you@contoso.com</b><span>Purview. Token valid for 52 minutes, renews silently.</span></div><span class="pill ok">Signed in</span><button class="btn" type="button">Sign out</button></div>
+                <div class="crow"><div class="main"><b>you@fabrikam.com</b><span>Purview. Sign-in expired yesterday.</span></div><span class="pill warn">Expired</span><button class="btn" type="button">Sign in again</button></div>
+              </div>
+            </div>
+            <div class="sect">
+              <header><h3>MCP servers</h3><button class="btn" type="button">Import from VS Code</button><button class="btn primary" type="button">Add server</button></header>
+              <div class="rows">
+                <div class="crow"><div class="main"><b>azure-devops</b><span>Local process, 14 tools, uses the Azure DevOps PAT</span></div><span class="pill ok">Running</span><input class="sw" id="s1" type="checkbox" checked aria-label="Enable azure-devops"></div>
+                <div class="crow"><div class="main"><b>purview</b><span>Local process, 9 tools, uses you@contoso.com</span></div><span class="pill ok">Running</span><input class="sw" id="s2" type="checkbox" checked aria-label="Enable purview"></div>
+                <div class="crow"><div class="main"><b>docs-search</b><span>HTTP, could not reach the server</span></div><span class="pill err">Failed</span><input class="sw" id="s3" type="checkbox" aria-label="Enable docs-search"></div>
+              </div>
+<pre class="cfg">{
+  "azure-devops": {
+    "command": "node",
+    "args": ["C:/tools/ado-mcp/index.js"],
+    "env": { "ADO_ORG": "contoso", "ADO_PAT": "${secret:ado_pat}" }
+  }
+}</pre>
+              <p class="small">Same shape as a VS Code <code>mcp.json</code>, so existing configs import as they are. Secrets are referenced by name.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="view" role="tabpanel" id="p-settings">
+          <div class="viewhead"><h3>Settings</h3></div>
+          <div class="scroll">
+            <div class="sect"><header><h3>Voice</h3></header>
+              <div class="rows">
+                <div class="field"><label for="wake">Wake phrase<span>Type any short phrase. No training step.</span></label><input id="wake" type="text" value="Hey Chat"></div>
+                <div class="field"><label for="sens">Sensitivity<span>Higher wakes more easily but mis-fires more.</span></label><input id="sens" type="range" min="1" max="10" value="6"></div>
+                <div class="field"><label for="micdev">Microphone</label><select id="micdev"><option>Default: Headset (Jabra Evolve2)</option><option>Laptop microphone array</option></select></div>
+                <div class="field"><label for="stt">Speech recognition<span>Runs on this PC. Audio never leaves it.</span></label><select id="stt"><option>Balanced (about 150 MB)</option><option>Fast (about 40 MB)</option><option>Most accurate (about 500 MB)</option></select></div>
+                <div class="field"><label for="tts">Read answers aloud<span>Uses the voices built into Windows.</span></label><input class="sw" id="tts" type="checkbox" checked></div>
+                <div class="field"><label for="ptt">Push to talk shortcut<span>Works even when wake phrase is off.</span></label><input id="ptt" type="text" value="Ctrl + Alt + Space"></div>
+              </div>
+            </div>
+            <div class="sect"><header><h3>App</h3></header>
+              <div class="rows">
+                <div class="field"><label for="boot">Start with Windows</label><input class="sw" id="boot" type="checkbox" checked></div>
+                <div class="field"><label for="tray">Keep running in the tray when closed</label><input class="sw" id="tray" type="checkbox" checked></div>
+                <div class="field"><label for="defm">Default model</label><select id="defm"><option>Auto</option><option>Claude Sonnet 4.5</option><option>GPT-5</option></select></div>
+                <div class="field"><label for="appr">Ask before tools change anything<span>Reading is automatic. Creating or editing asks first.</span></label><input class="sw" id="appr" type="checkbox" checked></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="float">
+      <div class="orb"><span class="dot"><svg class="icon"><use href="#i-mic"/></svg></span><div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><div class="t"><b>Listening…</b><span>Esc to cancel</span></div></div>
+      <p class="small" style="max-width:52ch">When the main window is hidden, the wake phrase shows this small bar above your other windows. The answer is spoken and saved to History; click the bar to open the full chat.</p>
+    </div>
+  </section>
+
+  <section class="plan">
+    <h2>How it fits together</h2>
+    <div class="flow">
+      <div class="col"><h3>You</h3>
+        <div class="node"><b>Voice</b><span>Wake phrase or push to talk</span></div>
+        <div class="node"><b>Chat window</b><span>Typing, history, connections</span></div>
+        <div class="node"><b>Browser</b><span>Only for Microsoft sign-in</span></div>
+      </div>
+      <div class="col mid"><h3>Hark on your PC</h3>
+        <div class="node"><b>Voice engine, offline</b><span>Wake phrase, speech to text, text to speech</span></div>
+        <div class="node"><b>Copilot SDK runtime</b><span>The same agent loop as Copilot, started with your PAT only</span></div>
+        <div class="node"><b>Your MCP servers</b><span>Started by the app with the right PAT or token</span></div>
+        <div class="node"><b>Vault and chat store</b><span>Secrets encrypted by Windows, chats in a local database</span></div>
+      </div>
+      <div class="col"><h3>Outside the PC</h3>
+        <div class="node"><b>GitHub Copilot</b><span>Models and billing. Receives text, never audio.</span></div>
+        <div class="node"><b>Azure DevOps</b><span>Reached by your MCP server with the PAT</span></div>
+        <div class="node"><b>Microsoft Purview</b><span>Reached with a Microsoft sign-in token</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="plan">
+    <h2>What each requirement needs</h2>
+    <div class="tbl"><table>
+      <tr><th>Requirement</th><th>How</th><th>Status</th></tr>
+      <tr><td>Runs without VS Code</td><td>The Copilot SDK ships its own Windows runtime inside the app. Nothing else to install.</td><td><span class="pill ok">Checked in SDK 1.0.30</span></td></tr>
+      <tr><td>Only your PAT is used</td><td>Token passed explicitly, with the “use logged-in user” option off, so no other GitHub login on the PC can be picked up.</td><td><span class="pill ok">Checked</span></td></tr>
+      <tr><td>Model picker</td><td>The SDK returns the models your plan allows, with each one’s cost multiplier. The app lists exactly that.</td><td><span class="pill ok">Checked</span></td></tr>
+      <tr><td>Your MCP tools</td><td>Local-process and HTTP servers, with environment variables, headers and per-tool filters. VS Code configs import directly.</td><td><span class="pill ok">Checked</span></td></tr>
+      <tr><td>Saved chats</td><td>Local database for the History tab. The SDK can resume a past session with its context.</td><td><span class="pill ok">Checked</span></td></tr>
+      <tr><td>Custom wake phrase</td><td>sherpa-onnx keyword spotting. You type the phrase; no model training. Short phrases can mis-fire, so there is a sensitivity setting and a shortcut as backup.</td><td><span class="pill warn">Needs tuning on real mics</span></td></tr>
+      <tr><td>Speech in and out</td><td>Local speech-to-text models and the voices built into Windows. One-time model download.</td><td><span class="pill ok">Feasible</span></td></tr>
+      <tr><td>Microsoft sign-in</td><td>Microsoft’s MSAL library: browser sign-in, encrypted token cache, silent renewal, several accounts.</td><td><span class="pill warn">Needs an app registration ID</span></td></tr>
+      <tr><td>Org policy</td><td>Your GitHub org must allow Copilot CLI/SDK use and fine-grained PATs with the Copilot Requests permission.</td><td><span class="pill warn">Confirm with a 1-day spike</span></td></tr>
+    </table></div>
+  </section>
+
+  <section class="plan">
+    <h2>Cost check</h2>
+    <div class="tbl"><table>
+      <tr><th>Piece</th><th>Choice</th><th>Cost</th></tr>
+      <tr><td>AI</td><td>GitHub Copilot through your PAT. Usage counts against your existing Copilot allowance.</td><td class="n">Copilot only</td></tr>
+      <tr><td>Voice</td><td>sherpa-onnx (Apache 2.0) with open models, plus Windows voices. Fully offline.</td><td class="n">0</td></tr>
+      <tr><td>App shell</td><td>Electron, React, TypeScript, SQLite. All open source.</td><td class="n">0</td></tr>
+      <tr><td>Microsoft sign-in</td><td>MSAL (MIT). An Entra app registration is free.</td><td class="n">0</td></tr>
+      <tr><td>Installer and updates</td><td>Unsigned installer shared internally, updates from GitHub Releases. A code-signing certificate would cost money, so it is left out; Windows shows a one-time warning on install.</td><td class="n">0</td></tr>
+    </table></div>
+    <p class="small" style="max-width:75ch">One thing to watch: Copilot moved to usage-based billing in June 2026. If your org admin has enabled paid overage, heavy use could bill beyond the plan. Ask them to keep the overage budget at zero and the app can never cost more than the seat. The app shows a usage meter either way.</p>
+  </section>
+
+  <section class="plan">
+    <h2>Build order</h2>
+    <ol class="steps">
+      <li><b>0. Spike, 1 to 2 days</b><span>On your PC: PAT in, list models, one prompt, one of your MCP tools called. Proves org policy and the SDK before anything else is built.</span></li>
+      <li><b>1. Chat core</b><span>App shell, tray, streaming chat, model picker, tool approval prompts, History tab.</span></li>
+      <li><b>2. Connections</b><span>Encrypted vault for PATs, MCP server manager with VS Code import, Microsoft accounts with on-demand browser sign-in.</span></li>
+      <li><b>3. Voice</b><span>Wake phrase, push to talk, speech to text, spoken answers, the floating bar.</span></li>
+      <li><b>4. Ship</b><span>Installer, auto-update, first-run setup, start with Windows.</span></li>
+    </ol>
+  </section>
+
+  <section class="plan">
+    <h2>What I need from you</h2>
+    <ul class="q">
+      <li>Your current VS Code <code>mcp.json</code> with secrets removed, so I can see how each server starts and what it expects.</li>
+      <li>How the Purview tools get their token today, and whether you have an Entra app registration (client ID and tenant) the app can sign in with.</li>
+      <li>Whether answers should be read aloud by default, or shown as text only.</li>
+      <li>Whether Electron is acceptable. It is the fastest route and matches this mock, but idles at roughly 150 to 250 MB of memory. A native .NET app would be lighter and slower to build.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+(function(){
+  var app=document.getElementById('app');
+  var tabs=document.querySelectorAll('.rail [role=tab]');
+  tabs.forEach(function(b){b.addEventListener('click',function(){
+    tabs.forEach(function(t){t.setAttribute('aria-selected',t===b?'true':'false')});
+    document.querySelectorAll('[role=tabpanel]').forEach(function(p){p.classList.toggle('on',p.id==='p-'+b.dataset.tab)});
+  })});
+  var copy={idle:['Waiting for “Hey Chat”',''],listen:['Listening','What changed in the loader since Friday…'],think:['Working','Calling azure-devops…'],speak:['Speaking','Two commits landed since Friday. Tap the mic to interrupt.']};
+  var segs=document.querySelectorAll('.seg button');
+  function setVoice(v){
+    app.dataset.voice=v;
+    segs.forEach(function(s){s.setAttribute('aria-pressed',s.dataset.v===v?'true':'false')});
+    var phrase=document.getElementById('wake').value||'Hey Chat';
+    document.getElementById('wakechiptxt').textContent=v==='idle'?'Waiting for “'+phrase+'”':copy[v][0];
+    document.getElementById('voicetxt').textContent=copy[v][1];
+    if(v!=='idle'){tabs[0].click()}
+  }
+  segs.forEach(function(s){s.addEventListener('click',function(){setVoice(s.dataset.v)})});
+  document.querySelector('.micbtn').addEventListener('click',function(){setVoice(app.dataset.voice==='idle'?'listen':'idle')});
+  document.getElementById('wake').addEventListener('input',function(){
+    var p=this.value||'Hey Chat';
+    segs[1].textContent='Heard “'+p+'”';
+    document.getElementById('prompt').placeholder='Ask anything, or say “'+p+'”';
+    if(app.dataset.voice==='idle')document.getElementById('wakechiptxt').textContent='Waiting for “'+p+'”';
+  });
+})();
+</script>
