@@ -196,8 +196,8 @@ public sealed partial class VoiceViewModel : ObservableObject
         {
             case "listening":
                 Heard = "";
-                Level = 0.55f;
                 State = OverlayState.Listening;
+                Level = 0.55f;
                 break;
             case "working":
                 State = OverlayState.Working;

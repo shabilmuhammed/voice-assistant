@@ -34,7 +34,7 @@ public sealed class VoiceService : IDisposable
 
     public static IReadOnlyList<Microphone> Microphones()
     {
-        var list = new List<Microphone> { new(-1, "Windows default microphone") };
+        var list = new List<Microphone> { new(-1, "Windows default") };
         try
         {
             for (var i = 0; i < WaveIn.DeviceCount; i++)
