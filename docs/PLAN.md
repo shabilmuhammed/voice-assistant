@@ -12,7 +12,7 @@ No VS Code required. The clickable mock is in `design/mockup.html`.
 | Shell | Electron + React + TypeScript (tray, global shortcut, autostart) | MIT |
 | Wake phrase, STT, VAD | `sherpa-onnx-node` (open-vocabulary keyword spotting, local ASR) | Apache-2.0 |
 | TTS | Windows built-in voices (optional local sherpa-onnx voices) | free |
-| Microsoft sign-in | `@azure/msal-node` + DPAPI-encrypted cache, system browser + PKCE | MIT |
+| Microsoft sign-in | Browser SSO as today, DPAPI-encrypted cache, no app registration | free |
 | Secrets | Electron `safeStorage` (Windows DPAPI) | free |
 | Chats | Local SQLite + SDK session ids for resume | free |
 | Installer / updates | electron-builder, unsigned, GitHub Releases | free (no code-signing cert) |
@@ -41,10 +41,23 @@ The phase 0 spike settles the first two on a real machine.
 
 ## How secrets reach MCP servers
 
-MCP configs reference secrets by name (`${secret:ado_pat}`, `${msal:account@tenant}`); the app
-resolves them at launch into the server's env (stdio) or headers (HTTP). If a prompt needs Purview and
-no valid token exists, the app opens the browser, completes sign-in, then starts or restarts that server.
-The exact hand-off depends on how the existing Purview server expects its token (open question).
+MCP configs reference secrets by name (`${secret:ado_pat}`); the app resolves them at launch into
+the server's env (stdio) or headers (HTTP).
+
+## Purview sign-in (no app registration, no service principal)
+
+Today the Purview MCP tool opens the default browser for SSO when a Purview tool is first called.
+That keeps working unchanged under the Copilot SDK, because the server process does the login itself.
+Two levels, both free:
+
+- **A. Zero change to the server.** The app keeps the Purview server process alive while it sits in
+  the tray, so the login is reused until it expires. Quitting the app loses it (in-memory cache).
+- **B. Cache survives restarts, and accounts appear in the Connections tab.** Either the server turns
+  on its library's persistent token cache (a few lines, e.g. `TokenCachePersistenceOptions` in
+  azure-identity), or the app performs the same browser sign-in with the same public client the
+  server already uses, stores the cache with Windows DPAPI, and hands the token to the server.
+
+B is the target. Which variant depends on the server's login code (open question 2).
 
 ## Phases
 
@@ -57,13 +70,13 @@ The exact hand-off depends on how the existing Purview server expects its token 
 ## Risks
 
 - Short wake phrases mis-fire; mitigated by a sensitivity setting, a confirm chime and push to talk.
-- Entra conditional access or admin consent may be required for the app registration.
+- If the tenant restricts sign-in clients, the app must use the same client the Purview tool uses today.
 - Unsigned installer triggers a one-time SmartScreen warning.
 - Always-on microphone: visible indicator, one-click mute, audio never leaves the PC.
 
 ## Open questions
 
 1. Current VS Code `mcp.json` (secrets removed): transport and launch command per server.
-2. How Purview tools obtain their token today; is there an Entra client ID and tenant to use?
+2. The Purview MCP tool's login code: language, library and credential type.
 3. Spoken answers by default, or text only?
 4. Electron (fast to build, 150 to 250 MB idle) or native .NET (lighter, slower to build)?

@@ -256,7 +256,7 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
             </div>
             <div class="msg" style="max-width:none">
               <div class="ask">
-                <div><b>Purview needs a Microsoft sign-in</b><br><span class="small">No valid token for contoso.com. Your browser opens, you sign in, and the token is kept encrypted on this PC until it expires.</span></div>
+                <div><b>Purview needs a Microsoft sign-in</b><br><span class="small">No valid login for contoso.com. Your default browser opens the usual sign-in page. The login is then kept encrypted on this PC and reused until it expires.</span></div>
                 <div class="row"><button class="btn primary" type="button">Sign in with Microsoft</button><button class="btn" type="button">Skip Purview for now</button></div>
               </div>
               <div class="ask">
@@ -406,7 +406,7 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
       <tr><td>Saved chats</td><td>Local database for the History tab. The SDK can resume a past session with its context.</td><td><span class="pill ok">Checked</span></td></tr>
       <tr><td>Custom wake phrase</td><td>sherpa-onnx keyword spotting. You type the phrase; no model training. Short phrases can mis-fire, so there is a sensitivity setting and a shortcut as backup.</td><td><span class="pill warn">Needs tuning on real mics</span></td></tr>
       <tr><td>Speech in and out</td><td>Local speech-to-text models and the voices built into Windows. One-time model download.</td><td><span class="pill ok">Feasible</span></td></tr>
-      <tr><td>Microsoft sign-in</td><td>Microsoft’s MSAL library: browser sign-in, encrypted token cache, silent renewal, several accounts.</td><td><span class="pill warn">Needs an app registration ID</span></td></tr>
+      <tr><td>Microsoft sign-in</td><td>The same browser sign-in your Purview tool shows today. No app registration and no service principal. The login is cached encrypted on the PC and reused until it expires, including after an app restart.</td><td><span class="pill warn">Need to see the tool’s login code</span></td></tr>
       <tr><td>Org policy</td><td>Your GitHub org must allow Copilot CLI/SDK use and fine-grained PATs with the Copilot Requests permission.</td><td><span class="pill warn">Confirm with a 1-day spike</span></td></tr>
     </table></div>
   </section>
@@ -418,7 +418,7 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
       <tr><td>AI</td><td>GitHub Copilot through your PAT. Usage counts against your existing Copilot allowance.</td><td class="n">Copilot only</td></tr>
       <tr><td>Voice</td><td>sherpa-onnx (Apache 2.0) with open models, plus Windows voices. Fully offline.</td><td class="n">0</td></tr>
       <tr><td>App shell</td><td>Electron, React, TypeScript, SQLite. All open source.</td><td class="n">0</td></tr>
-      <tr><td>Microsoft sign-in</td><td>MSAL (MIT). An Entra app registration is free.</td><td class="n">0</td></tr>
+      <tr><td>Microsoft sign-in</td><td>Browser sign-in with your own account, using Microsoft’s free libraries. No app registration, no service principal.</td><td class="n">0</td></tr>
       <tr><td>Installer and updates</td><td>Unsigned installer shared internally, updates from GitHub Releases. A code-signing certificate would cost money, so it is left out; Windows shows a one-time warning on install.</td><td class="n">0</td></tr>
     </table></div>
     <p class="small" style="max-width:75ch">One thing to watch: Copilot moved to usage-based billing in June 2026. If your org admin has enabled paid overage, heavy use could bill beyond the plan. Ask them to keep the overage budget at zero and the app can never cost more than the seat. The app shows a usage meter either way.</p>
@@ -439,7 +439,7 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
     <h2>What I need from you</h2>
     <ul class="q">
       <li>Your current VS Code <code>mcp.json</code> with secrets removed, so I can see how each server starts and what it expects.</li>
-      <li>How the Purview tools get their token today, and whether you have an Entra app registration (client ID and tenant) the app can sign in with.</li>
+      <li>The login code of the Purview MCP tool (language and library, for example <code>InteractiveBrowserCredential</code>), so the app can reuse that exact sign-in and keep its cache between restarts.</li>
       <li>Whether answers should be read aloud by default, or shown as text only.</li>
       <li>Whether Electron is acceptable. It is the fastest route and matches this mock, but idles at roughly 150 to 250 MB of memory. A native .NET app would be lighter and slower to build.</li>
     </ul>
