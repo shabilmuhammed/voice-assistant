@@ -6,15 +6,30 @@ namespace Hark.Core;
 
 public sealed record AuthResult(bool Ok, string Message);
 
-public sealed record ModelChoice(string Id, string Name, bool Enabled)
+/// <param name="Vision">True or false when Copilot says so; null when it does not say.</param>
+public sealed record ModelChoice(string Id, string Name, bool Enabled, bool? Vision = null)
 {
     public override string ToString() => Name;
 }
 
-public enum ToolApproval { AllowOnce, Deny }
+public enum ToolApproval { AllowOnce, Deny, DenyCommitOrPush }
 
-/// <summary>A tool wants to run. Key identifies the tool so the UI can remember "always allow".</summary>
-public sealed record ToolApprovalRequest(string Key, string Title, string Detail, bool ReadOnly);
+public enum ToolKind { Mcp, Shell, Write, Read, Url, Other }
+
+/// <summary>
+/// A tool wants to run. Key identifies it so the UI can remember "allow for this chat".
+/// Target is the command for Shell and the file path for Write and Read.
+/// </summary>
+public sealed record ToolApprovalRequest(string Key, string Title, string Detail, bool ReadOnly,
+    ToolKind Kind = ToolKind.Other, string Target = "");
+
+/// <summary>What a chat session is started with.</summary>
+public sealed record SessionOptions(
+    string? Model,
+    Dictionary<string, McpServerConfig>? Servers,
+    string? ResumeSessionId,
+    string? WorkingDirectory,
+    string? Instructions);
 
 public abstract record ChatEvent;
 public sealed record TextDelta(string MessageId, string Text) : ChatEvent;
@@ -85,40 +100,47 @@ public sealed class CopilotService : IAsyncDisposable
         var client = _client ?? throw new InvalidOperationException("Not connected to Copilot.");
         var models = await client.ListModelsAsync();
         return models.Select(m => new ModelChoice(m.Id, string.IsNullOrWhiteSpace(m.Name) ? m.Id : m.Name,
-            m.Policy is null || string.Equals(m.Policy.State.ToString(), "enabled", StringComparison.OrdinalIgnoreCase))).ToList();
+            m.Policy is null || string.Equals(m.Policy.State.ToString(), "enabled", StringComparison.OrdinalIgnoreCase),
+            m.Capabilities?.Supports?.Vision)).ToList();
     }
 
-    /// <summary>Starts a new session, or resumes one when <paramref name="resumeSessionId"/> is given and still exists.</summary>
-    public async Task<ChatSession> OpenSessionAsync(
-        string? model,
-        Dictionary<string, McpServerConfig>? servers,
-        string? resumeSessionId,
-        Func<ToolApprovalRequest, Task<ToolApproval>> approve)
+    /// <summary>Starts a new session, or resumes one when a session id is given and still exists.</summary>
+    public async Task<ChatSession> OpenSessionAsync(SessionOptions options, Func<ToolApprovalRequest, Task<ToolApproval>> approve)
     {
         var client = _client ?? throw new InvalidOperationException("Not connected to Copilot.");
         var chat = new ChatSession(approve);
 
-        if (resumeSessionId is not null)
+        if (options.ResumeSessionId is not null)
         {
             try
             {
-                var resume = new ResumeSessionConfig { Streaming = true, OnPermissionRequest = chat.HandlePermissionAsync };
-                if (!string.IsNullOrEmpty(model)) resume.Model = model;
-                if (servers is { Count: > 0 }) resume.McpServers = servers;
-                chat.Attach(await client.ResumeSessionAsync(resumeSessionId, resume), resumed: true);
+                var resume = new ResumeSessionConfig();
+                Apply(resume, options, chat);
+                chat.Attach(await client.ResumeSessionAsync(options.ResumeSessionId, resume), resumed: true);
                 return chat;
             }
             catch (Exception ex)
             {
-                Log.Error($"Could not resume session {resumeSessionId}; starting a new one.", ex);
+                Log.Error($"Could not resume session {options.ResumeSessionId}; starting a new one.", ex);
             }
         }
 
-        var config = new SessionConfig { Streaming = true, OnPermissionRequest = chat.HandlePermissionAsync };
-        if (!string.IsNullOrEmpty(model)) config.Model = model;
-        if (servers is { Count: > 0 }) config.McpServers = servers;
+        var config = new SessionConfig();
+        Apply(config, options, chat);
         chat.Attach(await client.CreateSessionAsync(config), resumed: false);
         return chat;
+    }
+
+    private static void Apply(SessionConfigBase config, SessionOptions options, ChatSession chat)
+    {
+        config.Streaming = true;
+        config.OnPermissionRequest = chat.HandlePermissionAsync;
+        if (!string.IsNullOrEmpty(options.Model)) config.Model = options.Model;
+        if (options.Servers is { Count: > 0 }) config.McpServers = options.Servers;
+        if (!string.IsNullOrWhiteSpace(options.WorkingDirectory) && Directory.Exists(options.WorkingDirectory))
+            config.WorkingDirectory = options.WorkingDirectory;
+        if (!string.IsNullOrWhiteSpace(options.Instructions))
+            config.SystemMessage = new SystemMessageConfig { Mode = SystemMessageMode.Append, Content = options.Instructions };
     }
 
     public async ValueTask DisposeAsync()
@@ -153,8 +175,16 @@ public sealed class ChatSession : IAsyncDisposable
         _subscription = session.On<SessionEvent>(OnSessionEvent);
     }
 
-    public Task SendAsync(string prompt) =>
-        (_session ?? throw new InvalidOperationException("Session is closed.")).SendAsync(new MessageOptions { Prompt = prompt });
+    public Task SendAsync(string prompt, IReadOnlyList<string>? imagePaths = null)
+    {
+        var session = _session ?? throw new InvalidOperationException("Session is closed.");
+        var message = new MessageOptions { Prompt = prompt };
+        if (imagePaths is { Count: > 0 })
+            message.Attachments = imagePaths
+                .Select(p => (Attachment)new AttachmentFile { Path = p, DisplayName = Path.GetFileName(p) })
+                .ToList();
+        return session.SendAsync(message);
+    }
 
     public Task AbortAsync() => _session?.AbortAsync() ?? Task.CompletedTask;
 
@@ -202,9 +232,12 @@ public sealed class ChatSession : IAsyncDisposable
         {
             var ask = Describe(request);
             var answer = await _approve(ask);
-            return answer == ToolApproval.AllowOnce
-                ? PermissionDecision.ApproveOnce()
-                : PermissionDecision.Reject("The user declined this action.");
+            return answer switch
+            {
+                ToolApproval.AllowOnce => PermissionDecision.ApproveOnce(),
+                ToolApproval.DenyCommitOrPush => PermissionDecision.Reject(RepoPolicy.CommitOrPushFeedback),
+                _ => PermissionDecision.Reject("The user declined this action."),
+            };
         }
         catch (Exception ex)
         {
@@ -219,11 +252,14 @@ public sealed class ChatSession : IAsyncDisposable
             $"mcp:{m.ServerName}/{m.ToolName}",
             $"{m.ServerName}: {m.ToolTitle ?? m.ToolName}",
             Pretty(m.Args),
-            m.ReadOnly == true),
-        PermissionRequestShell s => new ToolApprovalRequest("shell", "Run a command on this PC", s.FullCommandText ?? "", false),
-        PermissionRequestWrite w => new ToolApprovalRequest("write", "Write a file", w.FileName ?? "", false),
-        PermissionRequestRead r => new ToolApprovalRequest("read", "Read a file", r.Path ?? "", true),
-        PermissionRequestUrl u => new ToolApprovalRequest("url", "Open a web address", u.Url ?? "", true),
+            m.ReadOnly == true, ToolKind.Mcp),
+        PermissionRequestShell s => new ToolApprovalRequest("shell", "this command to run on your PC", s.FullCommandText ?? "", false,
+            ToolKind.Shell, s.FullCommandText ?? ""),
+        PermissionRequestWrite w => new ToolApprovalRequest("write", "a file to be changed", w.ResolvedPath ?? w.FileName ?? "", false,
+            ToolKind.Write, w.ResolvedPath ?? w.FileName ?? ""),
+        PermissionRequestRead r => new ToolApprovalRequest("read", "a file to be read", r.ResolvedPath ?? r.Path ?? "", true,
+            ToolKind.Read, r.ResolvedPath ?? r.Path ?? ""),
+        PermissionRequestUrl u => new ToolApprovalRequest("url", "a web address to be opened", u.Url ?? "", true, ToolKind.Url, u.Url ?? ""),
         PermissionRequestCustomTool c => new ToolApprovalRequest($"tool:{c.ToolName}", c.ToolName ?? "Tool", Pretty(c.Args), false),
         _ => new ToolApprovalRequest($"other:{request.Kind}", request.Kind.ToString() ?? "Action", "", false),
     };

@@ -43,8 +43,16 @@
                         <DataTemplate DataType="{x:Type vm:UserMessageVm}">
                             <Border HorizontalAlignment="Right" MaxWidth="600" Margin="60,8,0,8" Padding="14,9" CornerRadius="12,12,3,12"
                                     Background="{DynamicResource AccentFillColorDefaultBrush}">
-                                <TextBox Style="{StaticResource SelectableText}" Text="{Binding Text, Mode=OneWay}"
-                                         Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                                <StackPanel>
+                                    <Button Command="{Binding OpenImageCommand}" Padding="0" Margin="0,2,0,8" BorderThickness="0"
+                                            HorizontalAlignment="Left" Cursor="Hand" ToolTip="Open the capture that was sent"
+                                            AutomationProperties.Name="Open the screen capture that was sent"
+                                            Visibility="{Binding HasImage, Converter={StaticResource BoolToVisibility}}">
+                                        <Image Source="{Binding ImagePath}" MaxHeight="150" MaxWidth="320" Stretch="Uniform" />
+                                    </Button>
+                                    <TextBox Style="{StaticResource SelectableText}" Text="{Binding Text, Mode=OneWay}"
+                                             Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                                </StackPanel>
                             </Border>
                         </DataTemplate>
 
@@ -82,7 +90,7 @@
                                     <StackPanel Orientation="Horizontal" Margin="0,12,0,0"
                                                 Visibility="{Binding IsPending, Converter={StaticResource BoolToVisibility}}">
                                         <Button Content="Allow once" Command="{Binding AllowOnceCommand}" Style="{DynamicResource AccentButtonStyle}" Padding="14,6" />
-                                        <Button Content="Always allow this tool" Command="{Binding AlwaysAllowCommand}" Margin="8,0,0,0" Padding="14,6" />
+                                        <Button Content="{Binding AlwaysLabel}" Command="{Binding AlwaysAllowCommand}" Margin="8,0,0,0" Padding="14,6" />
                                         <Button Content="Deny" Command="{Binding DenyCommand}" Margin="8,0,0,0" Padding="14,6" />
                                     </StackPanel>
                                     <TextBlock Text="{Binding Outcome}" Style="{StaticResource Secondary}" Margin="0,8,0,0"
@@ -122,6 +130,12 @@
                         <TextBlock Text="Send" />
                     </StackPanel>
                 </Button>
+                <ToggleButton DockPanel.Dock="Left" Margin="0,0,10,0" Padding="10,8" VerticalAlignment="Bottom"
+                              IsChecked="{Binding IncludeScreen, Mode=TwoWay}"
+                              ToolTip="Send a capture of your whole screen with the next message"
+                              AutomationProperties.Name="Include my screen with the next message">
+                    <TextBlock Style="{StaticResource Icon}" Text="&#xE7F4;" />
+                </ToggleButton>
                 <TextBox x:Name="InputBox" Text="{Binding Input, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          AcceptsReturn="True" TextWrapping="Wrap" MinHeight="38" MaxHeight="150" FontSize="14"
                          VerticalScrollBarVisibility="Auto" PreviewKeyDown="InputBox_PreviewKeyDown"

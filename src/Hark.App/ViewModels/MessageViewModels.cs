@@ -6,9 +6,28 @@ namespace Hark.App.ViewModels;
 
 public abstract partial class MessageVm : ObservableObject;
 
-public sealed partial class UserMessageVm(string text) : MessageVm
+public sealed partial class UserMessageVm(string text, string? imagePath = null) : MessageVm
 {
     public string Text { get; } = text;
+
+    /// <summary>Screen capture sent with this message, if any and if the file still exists.</summary>
+    public string? ImagePath { get; } = imagePath is not null && File.Exists(imagePath) ? imagePath : null;
+
+    public bool HasImage => ImagePath is not null;
+
+    [RelayCommand]
+    private void OpenImage()
+    {
+        try
+        {
+            if (ImagePath is not null)
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(ImagePath) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Opening a capture failed", ex);
+        }
+    }
 }
 
 public sealed partial class AssistantMessageVm(string messageId, string text) : MessageVm
@@ -58,6 +77,12 @@ public sealed partial class ApprovalVm : MessageVm
 
     public ToolApprovalRequest Request { get; }
     public string Title => $"Allow {Request.Title}?";
+    public string AlwaysLabel => Request.Kind switch
+    {
+        ToolKind.Shell => "Allow commands for this chat",
+        ToolKind.Write => "Allow edits for this chat",
+        _ => "Always allow this tool",
+    };
     public string Detail => Request.Detail;
     public Task<ToolApproval> Answer => _answer.Task;
 
@@ -74,7 +99,7 @@ public sealed partial class ApprovalVm : MessageVm
     private void AlwaysAllow()
     {
         _alwaysAllow(Request.Key);
-        Resolve(ToolApproval.AllowOnce, "Allowed for the rest of this session");
+        Resolve(ToolApproval.AllowOnce, "Allowed for the rest of this chat");
     }
 
     [RelayCommand]

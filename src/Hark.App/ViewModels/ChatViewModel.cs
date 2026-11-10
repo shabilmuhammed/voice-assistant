@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -39,6 +40,15 @@ public sealed partial class ChatViewModel : ObservableObject
 
     [ObservableProperty]
     private ModelChoice? _selectedModel;
+
+    /// <summary>When on, the next message is sent with a capture of the whole screen.</summary>
+    [ObservableProperty]
+    private bool _includeScreen;
+
+    // Phrases that mean "look at what I am looking at".
+    private static readonly Regex ScreenPhrase = new(
+        @"\b(my|the|this) screen\b|\bon[- ]screen\b|\bthis code\b|\bwhat('?s| is) (going on|happening) (here|in this)\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>Raised when the view should scroll to the newest message.</summary>
     public event Action? ScrollRequested;
@@ -95,7 +105,23 @@ public sealed partial class ChatViewModel : ObservableObject
 
         Input = "";
         IsBusy = true;
-        Add(new UserMessageVm(prompt));
+
+        ScreenShot? shot = null;
+        if (IncludeScreen || ScreenPhrase.IsMatch(prompt))
+        {
+            IncludeScreen = false;
+            if (SelectedModel?.Vision == false)
+            {
+                Add(new UserMessageVm(prompt));
+                Add(new ErrorVm($"{SelectedModel.Name} cannot read images, so the screen was not sent. Pick another model and ask again."));
+                IsBusy = false;
+                return;
+            }
+            Status = "Capturing your screen…";
+            shot = _main.CaptureScreen is null ? null : await _main.CaptureScreen();
+            if (shot is null) Add(new NoteVm("The screen could not be captured, so the message was sent without it."));
+        }
+        Add(new UserMessageVm(prompt, shot?.Path));
 
         try
         {
@@ -104,6 +130,7 @@ public sealed partial class ChatViewModel : ObservableObject
                 Title = prompt.Length > 60 ? prompt[..60].TrimEnd() + "…" : prompt;
                 _conversationId = _main.Store.CreateConversation(Title, SelectedModel?.Id);
             }
+            if (shot is not null) _main.Store.AddMessage(_conversationId.Value, "image", shot.Path);
             _main.Store.AddMessage(_conversationId.Value, "user", prompt);
 
             if (_session is null)
@@ -112,7 +139,12 @@ public sealed partial class ChatViewModel : ObservableObject
                 Status = mcp.Count > 0
                     ? "Starting your tools. The first message can take a minute or two."
                     : "Starting…";
-                _session = await _main.Copilot.OpenSessionAsync(SelectedModel?.Id, mcp, _resumeSessionId, ApproveAsync);
+                var repos = _main.Settings.ReposRoot;
+                var hasRepos = !string.IsNullOrWhiteSpace(repos) && Directory.Exists(repos);
+                var options = new SessionOptions(SelectedModel?.Id, mcp, _resumeSessionId,
+                    hasRepos ? repos : null,
+                    hasRepos ? RepoPolicy.Instructions(repos!) : null);
+                _session = await _main.Copilot.OpenSessionAsync(options, ApproveAsync);
                 _session.Event += OnChatEvent;
                 if (_resumeSessionId is not null && !_session.Resumed)
                     Add(new NoteVm("The earlier context of this chat could not be restored, so Copilot only sees messages from here on."));
@@ -121,7 +153,10 @@ public sealed partial class ChatViewModel : ObservableObject
             }
 
             Status = "Working…";
-            await _session.SendAsync(prompt);
+            var text = shot is { ActiveWindowTitle.Length: > 0 }
+                ? $"{prompt}\n\n(A capture of my whole screen is attached. The window in front is titled \"{shot.ActiveWindowTitle}\".)"
+                : shot is not null ? $"{prompt}\n\n(A capture of my whole screen is attached.)" : prompt;
+            await _session.SendAsync(text, shot is null ? null : [shot.Path]);
         }
         catch (Exception ex)
         {
@@ -174,11 +209,16 @@ public sealed partial class ChatViewModel : ObservableObject
         Status = "";
         IsBusy = false;
 
+        string? pendingImage = null;
         foreach (var m in _main.Store.GetMessages(conversation.Id))
         {
             switch (m.Kind)
             {
-                case "user": Messages.Add(new UserMessageVm(m.Content)); break;
+                case "image": pendingImage = m.Content; break;
+                case "user":
+                    Messages.Add(new UserMessageVm(m.Content, pendingImage));
+                    pendingImage = null;
+                    break;
                 case "assistant": Messages.Add(new AssistantMessageVm("", m.Content)); break;
                 case "error": Messages.Add(new ErrorVm(m.Content)); break;
                 case "tool":
@@ -199,6 +239,11 @@ public sealed partial class ChatViewModel : ObservableObject
     }
 
     public long? CurrentConversationId => _conversationId;
+
+    public void AddDemoImage(string path)
+    {
+        Messages.Insert(0, new UserMessageVm("What is going on in this code?", path));
+    }
 
     public void LoadDemo()
     {
@@ -287,7 +332,17 @@ public sealed partial class ChatViewModel : ObservableObject
 
     private Task<ToolApproval> ApproveAsync(ToolApprovalRequest request)
     {
-        if (_alwaysAllowed.Contains(request.Key) || (request.ReadOnly && _main.Settings.AutoApproveReadOnlyTools))
+        // Hard rule, whatever else is allowed: Hark never commits or pushes.
+        if (request.Kind == ToolKind.Shell && RepoPolicy.IsCommitOrPush(request.Target))
+        {
+            Application.Current?.Dispatcher.BeginInvoke(() =>
+                Add(new NoteVm("Blocked a git commit or push. Hark saves changes but leaves committing and pushing to you.")));
+            return Task.FromResult(ToolApproval.DenyCommitOrPush);
+        }
+
+        // A file edit outside the repos folder always asks, even after "allow edits for this chat".
+        var insideRepos = request.Kind != ToolKind.Write || RepoPolicy.IsInside(_main.Settings.ReposRoot, request.Target);
+        if ((insideRepos && _alwaysAllowed.Contains(request.Key)) || (request.ReadOnly && _main.Settings.AutoApproveReadOnlyTools))
             return Task.FromResult(ToolApproval.AllowOnce);
 
         var dispatcher = Application.Current?.Dispatcher;

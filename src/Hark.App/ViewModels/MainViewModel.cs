@@ -42,6 +42,9 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isConnected;
 
+    /// <summary>Set by the app shell: captures the whole screen, or returns null if it cannot.</summary>
+    public Func<Task<ScreenShot?>>? CaptureScreen { get; set; }
+
     /// <summary>Raised when the window should come to the front (for example, a tool is waiting for approval).</summary>
     public event Action? AttentionRequested;
 

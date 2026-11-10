@@ -47,10 +47,25 @@ public partial class App : Application
 
         // "--demo" fills the screens with sample data and talks to nothing; used for automated screenshots.
         var demo = e.Args.Contains("--demo");
+        _main.CaptureScreen = () => ScreenCapture.CaptureAsync(_window);
         if (!demo) CreateTray();
         _window.Show();
-        if (demo) _main.LoadDemo(PageArg(e.Args));
-        else _ = _main.InitializeAsync();
+        if (demo)
+        {
+            _main.LoadDemo(PageArg(e.Args));
+            if (e.Args.Contains("--demo-capture")) _ = DemoCaptureAsync();
+        }
+        else
+        {
+            ScreenCapture.CleanUp();
+            _ = _main.InitializeAsync();
+        }
+    }
+
+    private async Task DemoCaptureAsync()
+    {
+        var shot = await ScreenCapture.CaptureAsync(_window);
+        if (shot is not null) _main?.Chat.AddDemoImage(shot.Path);
     }
 
     private static int PageArg(string[] args)

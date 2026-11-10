@@ -105,3 +105,31 @@ public class LogTests
         Assert.Equal("token=***", Log.Mask("token=github_pat_ABCDEFG123"));
     }
 }
+
+public class RepoPolicyTests
+{
+    [Theory]
+    [InlineData("git commit -m \"x\"", true)]
+    [InlineData("git push origin feature/x", true)]
+    [InlineData("cd repo; git add -A; git commit -am wip", true)]
+    [InlineData("git -C C:\\src\\repo push", true)]
+    [InlineData("GIT.EXE Push --force", true)]
+    [InlineData("git status", false)]
+    [InlineData("git pull origin master", false)]
+    [InlineData("git checkout -b fix/commit-message-parser", false)]
+    [InlineData("git log --oneline | Select-String push", false)]
+    [InlineData("", false)]
+    public void Detects_commit_and_push(string command, bool expected) =>
+        Assert.Equal(expected, RepoPolicy.IsCommitOrPush(command));
+
+    [Fact]
+    public void Knows_which_paths_are_inside_the_repos_folder()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "hark-repos");
+        Assert.True(RepoPolicy.IsInside(root, Path.Combine(root, "one", "src", "a.cs")));
+        Assert.True(RepoPolicy.IsInside(root, root));
+        Assert.False(RepoPolicy.IsInside(root, Path.Combine(root, "..", "elsewhere", "a.cs")));
+        Assert.False(RepoPolicy.IsInside(root, root + "-other"));
+        Assert.False(RepoPolicy.IsInside(null, root));
+    }
+}

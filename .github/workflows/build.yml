@@ -41,12 +41,12 @@ jobs:
         run: |
           Add-Type -AssemblyName System.Windows.Forms, System.Drawing
           New-Item -ItemType Directory -Force shots | Out-Null
-          function Shot($name, $page, $dark) {
+          function Shot($name, $page, $dark, $extra) {
             $v = if ($dark) { 0 } else { 1 }
             $key = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
             New-Item -Path $key -Force | Out-Null
             Set-ItemProperty -Path $key -Name AppsUseLightTheme -Value $v -Type DWord
-            $p = Start-Process -FilePath "out/hark/Hark.exe" -ArgumentList "--demo","--page",$page -PassThru
+            $p = Start-Process -FilePath "out/hark/Hark.exe" -ArgumentList (@("--demo","--page",$page) + @($extra | Where-Object { $_ })) -PassThru
             Start-Sleep -Seconds 8
             $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
             $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
@@ -58,6 +58,7 @@ jobs:
             Start-Sleep -Seconds 1
           }
           Shot "chat-light" 0 $false
+          Shot "chat-capture" 0 $false "--demo-capture"
           Shot "history-light" 1 $false
           Shot "connections-light" 2 $false
           Shot "settings-light" 3 $false

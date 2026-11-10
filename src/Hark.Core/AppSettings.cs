@@ -8,6 +8,9 @@ public sealed class AppSettings
     public string? GitHubPat { get; set; }
     public string? DefaultModel { get; set; }
     public string? McpConfigPath { get; set; }
+
+    /// <summary>Folder that holds the user's cloned repositories, one per subfolder.</summary>
+    public string? ReposRoot { get; set; }
     public bool CloseToTray { get; set; } = true;
     public bool AutoApproveReadOnlyTools { get; set; } = true;
     public List<string> DisabledServers { get; set; } = new();

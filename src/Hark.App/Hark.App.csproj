@@ -9,7 +9,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Hark</AssemblyName>
     <RootNamespace>Hark.App</RootNamespace>
-    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <NoWarn>$(NoWarn);WPF0001;WFO0003</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <!-- Windows Forms is referenced only for the tray icon; keep its types out of the way of WPF's. -->

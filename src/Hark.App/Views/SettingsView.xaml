@@ -56,6 +56,13 @@
                 <TextBlock Text="Files" Style="{StaticResource SectionTitle}" Margin="0,26,0,8" />
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
+                        <TextBlock Text="Repositories folder" FontWeight="SemiBold" />
+                        <TextBlock Style="{StaticResource Secondary}" Margin="0,2,0,8"
+                                   Text="The folder that holds your cloned repos, for example C:\Users\you\source\repos. Copilot can pull, branch and edit files there. It never commits or pushes." />
+                        <TextBox Text="{Binding ReposRoot, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                 AutomationProperties.Name="Repositories folder" />
+                        <TextBlock Text="{Binding ReposNote}" Style="{StaticResource Secondary}" Margin="0,6,0,18" />
+
                         <TextBlock Text="MCP config file" FontWeight="SemiBold" />
                         <TextBlock Style="{StaticResource Secondary}" Margin="0,2,0,8">
                             <Run Text="Leave empty to use the VS Code file:" />

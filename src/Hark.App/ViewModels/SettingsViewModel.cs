@@ -21,6 +21,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         _closeToTray = main.Settings.CloseToTray;
         _autoApproveReadOnlyTools = main.Settings.AutoApproveReadOnlyTools;
         _mcpConfigPath = main.Settings.McpConfigPath ?? "";
+        _reposRoot = main.Settings.ReposRoot ?? "";
+        _reposNote = DescribeRepos(_reposRoot);
         _startWithWindows = ReadStartWithWindows();
         _loading = false;
     }
@@ -41,6 +43,12 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _mcpConfigPath;
+
+    [ObservableProperty]
+    private string _reposRoot;
+
+    [ObservableProperty]
+    private string _reposNote;
 
     [ObservableProperty]
     private string _note = "";
@@ -83,6 +91,30 @@ public sealed partial class SettingsViewModel : ObservableObject
         if (_loading) return;
         _main.Settings.McpConfigPath = string.IsNullOrWhiteSpace(value) ? null : value.Trim().Trim('"');
         Save();
+    }
+
+    partial void OnReposRootChanged(string value)
+    {
+        if (_loading) return;
+        var path = value.Trim().Trim('"');
+        _main.Settings.ReposRoot = path.Length == 0 ? null : path;
+        ReposNote = DescribeRepos(path);
+        Save();
+    }
+
+    private static string DescribeRepos(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return "Not set. Copilot cannot work in your repositories until you set this.";
+        if (!Directory.Exists(path)) return "This folder does not exist.";
+        try
+        {
+            var count = Directory.EnumerateDirectories(path).Count(d => Directory.Exists(Path.Combine(d, ".git")));
+            return $"{count} repositories found. The change applies to the next new chat.";
+        }
+        catch (Exception ex)
+        {
+            return $"Could not read this folder: {ex.Message}";
+        }
     }
 
     partial void OnStartWithWindowsChanged(bool value)
