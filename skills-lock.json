@@ -12,6 +12,12 @@
       "sourceType": "github",
       "skillPath": ".agents/skills/impeccable/SKILL.md",
       "computedHash": "731d7fbd8800a9ad70a04c8834c25304370b4c3310866ff26bfd14e0c3b12975"
+    },
+    "wpf": {
+      "source": "managedcode/dotnet-skills",
+      "sourceType": "github",
+      "skillPath": "catalog/Frameworks/WPF/skills/wpf/SKILL.md",
+      "computedHash": "d7568e857eaf8e53932006bfe703421df90b0625fcca1841aa37b126fb6c5d56"
     }
   }
 }
