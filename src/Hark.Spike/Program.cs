@@ -1,6 +1,7 @@
 #pragma warning disable GHCP001 // PermissionDecision is marked experimental in the SDK.
 using System.Text;
 using GitHub.Copilot;
+using GitHub.Copilot.Rpc;
 using Hark.Spike;
 
 // Hark spike: proves the pieces the full app depends on, on the real laptop.
@@ -197,7 +198,10 @@ int Finish()
 
 Task<PermissionDecision> AskOnConsole(PermissionRequest request, PermissionInvocation invocation)
 {
-    report.Line($"\n  [permission] {request.Kind}: {System.Text.Json.JsonSerializer.Serialize(request, request.GetType())}");
+    string detail;
+    try { detail = System.Text.Json.JsonSerializer.Serialize(request, request.GetType()); }
+    catch { detail = request.GetType().Name; }
+    report.Line($"\n  [permission] {request.Kind}: {detail}");
     if (Console.IsInputRedirected)
         return Task.FromResult<PermissionDecision>(PermissionDecision.UserNotAvailable());
     Console.Write("  Allow this once? (y/N): ");

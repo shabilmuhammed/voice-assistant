@@ -34,11 +34,9 @@ public static class McpConfig
             if (s.GetRawText().Contains("${input:", StringComparison.Ordinal))
                 warnings.Add($"{entry.Name}: uses ${{input:...}}, which only VS Code can fill in. Put the value in directly.");
 
-            var type = s.TryGetProperty("type", out var t) ? t.GetString() : null;
             if (s.TryGetProperty("url", out var url))
             {
                 var http = new McpHttpServerConfig { Url = url.GetString()! };
-                if (type is "sse") http.Type = "sse";
                 if (s.TryGetProperty("headers", out var headers))
                 {
                     http.Headers = ReadMap(headers);
