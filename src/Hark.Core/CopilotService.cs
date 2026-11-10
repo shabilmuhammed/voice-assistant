@@ -12,7 +12,7 @@ public sealed record ModelChoice(string Id, string Name, bool Enabled, bool? Vis
     public override string ToString() => Name;
 }
 
-public enum ToolApproval { AllowOnce, Deny, DenyCommitOrPush }
+public enum ToolApproval { AllowOnce, Deny }
 
 public enum ToolKind { Mcp, Shell, Write, Read, Url, Other }
 
@@ -29,7 +29,8 @@ public sealed record SessionOptions(
     Dictionary<string, McpServerConfig>? Servers,
     string? ResumeSessionId,
     string? WorkingDirectory,
-    string? Instructions);
+    string? Instructions,
+    IReadOnlyList<string>? AdditionalDirectories = null);
 
 public abstract record ChatEvent;
 public sealed record TextDelta(string MessageId, string Text) : ChatEvent;
@@ -139,6 +140,8 @@ public sealed class CopilotService : IAsyncDisposable
         if (options.Servers is { Count: > 0 }) config.McpServers = options.Servers;
         if (!string.IsNullOrWhiteSpace(options.WorkingDirectory) && Directory.Exists(options.WorkingDirectory))
             config.WorkingDirectory = options.WorkingDirectory;
+        var extra = options.AdditionalDirectories?.Where(Directory.Exists).ToList();
+        if (extra is { Count: > 0 }) config.AdditionalDirectories = extra;
         if (!string.IsNullOrWhiteSpace(options.Instructions))
             config.SystemMessage = new SystemMessageConfig { Mode = SystemMessageMode.Append, Content = options.Instructions };
     }
@@ -175,12 +178,12 @@ public sealed class ChatSession : IAsyncDisposable
         _subscription = session.On<SessionEvent>(OnSessionEvent);
     }
 
-    public Task SendAsync(string prompt, IReadOnlyList<string>? imagePaths = null)
+    public Task SendAsync(string prompt, IReadOnlyList<string>? attachmentPaths = null)
     {
         var session = _session ?? throw new InvalidOperationException("Session is closed.");
         var message = new MessageOptions { Prompt = prompt };
-        if (imagePaths is { Count: > 0 })
-            message.Attachments = imagePaths
+        if (attachmentPaths is { Count: > 0 })
+            message.Attachments = attachmentPaths
                 .Select(p => (Attachment)new AttachmentFile { Path = p, DisplayName = Path.GetFileName(p) })
                 .ToList();
         return session.SendAsync(message);
@@ -256,12 +259,9 @@ public sealed class ChatSession : IAsyncDisposable
         {
             var ask = Describe(request);
             var answer = await _approve(ask);
-            return answer switch
-            {
-                ToolApproval.AllowOnce => PermissionDecision.ApproveOnce(),
-                ToolApproval.DenyCommitOrPush => PermissionDecision.Reject(RepoPolicy.CommitOrPushFeedback),
-                _ => PermissionDecision.Reject("The user declined this action."),
-            };
+            return answer == ToolApproval.AllowOnce
+                ? PermissionDecision.ApproveOnce()
+                : PermissionDecision.Reject("The user declined this action.");
         }
         catch (Exception ex)
         {

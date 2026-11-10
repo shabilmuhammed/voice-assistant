@@ -70,8 +70,10 @@ Done:
 - Spike on the laptop: PAT accepted on its own, six models listed, MCP servers started outside VS Code.
 - Chat core: streaming chat, model picker, tool approvals, history with resume, tray, settings.
 - Formatted answers (tables, code blocks, lists, links).
-- Repository work: sessions start in the repositories folder with standing rules; `git commit` and `git push`
-  are blocked in code; edits outside that folder always ask.
+- Repository work: sessions start in the repositories folder with standing rules. Commit and push are allowed when the
+  user asks (never on the default branch, never forced); edits outside that folder always ask.
+- Attachments: files and images by button, drag and drop, or paste.
+- Generated files: saved to a configurable folder and listed in the chat with Open and Show in folder.
 - Screen reading: whole-desktop capture attached to a message, by button or by phrase.
 - Windows build on GitHub Actions with tests, a zip to download and screenshots of every screen.
 

@@ -42,6 +42,17 @@ public sealed partial class ChatViewModel : ObservableObject
     [ObservableProperty]
     private ModelChoice? _selectedModel;
 
+    private const int MaxAttachments = 10;
+    private const long MaxAttachmentBytes = 25 * 1024 * 1024;
+
+    /// <summary>Files and images that will go with the next message.</summary>
+    public ObservableCollection<AttachmentVm> PendingAttachments { get; } = new();
+
+    [ObservableProperty]
+    private bool _hasPendingAttachments;
+
+    private Dictionary<string, DateTime> _outputBefore = new();
+
     /// <summary>When on, the next message is sent with a capture of the whole screen.</summary>
     [ObservableProperty]
     private bool _includeScreen;
@@ -107,22 +118,31 @@ public sealed partial class ChatViewModel : ObservableObject
         Input = "";
         IsBusy = true;
 
+        var wantsScreen = IncludeScreen || ScreenPhrase.IsMatch(prompt);
+        var hasImage = wantsScreen || PendingAttachments.Any(f => f.IsImage);
+        if (hasImage && SelectedModel?.Vision == false)
+        {
+            Input = prompt;
+            Add(new ErrorVm($"{SelectedModel.Name} cannot read images, so nothing was sent. Pick another model, or remove the image, and send again."));
+            IsBusy = false;
+            return;
+        }
+
         ScreenShot? shot = null;
-        if (IncludeScreen || ScreenPhrase.IsMatch(prompt))
+        if (wantsScreen)
         {
             IncludeScreen = false;
-            if (SelectedModel?.Vision == false)
-            {
-                Add(new UserMessageVm(prompt));
-                Add(new ErrorVm($"{SelectedModel.Name} cannot read images, so the screen was not sent. Pick another model and ask again."));
-                IsBusy = false;
-                return;
-            }
             Status = "Capturing your screen…";
             shot = _main.CaptureScreen is null ? null : await _main.CaptureScreen();
             if (shot is null) Add(new NoteVm("The screen could not be captured, so the message was sent without it."));
         }
-        Add(new UserMessageVm(prompt, shot?.Path));
+
+        var files = new List<string>();
+        if (shot is not null) files.Add(shot.Path);
+        files.AddRange(PendingAttachments.Select(f => f.Path).Where(File.Exists));
+        PendingAttachments.Clear();
+        HasPendingAttachments = false;
+        Add(new UserMessageVm(prompt, files));
 
         try
         {
@@ -131,7 +151,8 @@ public sealed partial class ChatViewModel : ObservableObject
                 Title = prompt.Length > 60 ? prompt[..60].TrimEnd() + "…" : prompt;
                 _conversationId = _main.Store.CreateConversation(Title, SelectedModel?.Id);
             }
-            if (shot is not null) _main.Store.AddMessage(_conversationId.Value, "image", shot.Path);
+            foreach (var file in files)
+                _main.Store.AddMessage(_conversationId.Value, new AttachmentVm(file).IsImage ? "image" : "file", file);
             _main.Store.AddMessage(_conversationId.Value, "user", prompt);
 
             if (_session is null)
@@ -142,9 +163,11 @@ public sealed partial class ChatViewModel : ObservableObject
                     : "Starting…";
                 var repos = _main.Settings.ReposRoot;
                 var hasRepos = !string.IsNullOrWhiteSpace(repos) && Directory.Exists(repos);
+                var output = _main.Settings.EffectiveOutputFolder;
                 var options = new SessionOptions(SelectedModel?.Id, mcp, _resumeSessionId,
                     hasRepos ? repos : null,
-                    hasRepos ? RepoPolicy.Instructions(repos!) : null);
+                    RepoPolicy.Instructions(hasRepos ? repos : null, output),
+                    [output]);
                 _session = await _main.Copilot.OpenSessionAsync(options, ApproveAsync);
                 _session.Event += OnChatEvent;
                 if (_resumeSessionId is not null && !_session.Resumed)
@@ -157,7 +180,8 @@ public sealed partial class ChatViewModel : ObservableObject
             var text = shot is { ActiveWindowTitle.Length: > 0 }
                 ? $"{prompt}\n\n(A capture of my whole screen is attached. The window in front is titled \"{shot.ActiveWindowTitle}\".)"
                 : shot is not null ? $"{prompt}\n\n(A capture of my whole screen is attached.)" : prompt;
-            await _session.SendAsync(text, shot is null ? null : [shot.Path]);
+            _outputBefore = SnapshotOutput();
+            await _session.SendAsync(text, files.Count == 0 ? null : files);
         }
         catch (Exception ex)
         {
@@ -166,6 +190,72 @@ public sealed partial class ChatViewModel : ObservableObject
             IsBusy = false;
             Status = "";
         }
+    }
+
+    [RelayCommand]
+    private void Attach()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Attach files or images",
+            Multiselect = true,
+            CheckFileExists = true,
+        };
+        var repos = _main.Settings.ReposRoot;
+        if (!string.IsNullOrWhiteSpace(repos) && Directory.Exists(repos)) dialog.InitialDirectory = repos;
+        if (dialog.ShowDialog() == true) AddAttachments(dialog.FileNames);
+    }
+
+    /// <summary>Adds files to the next message. Used by the Attach button, drag and drop, and paste.</summary>
+    public void AddAttachments(IEnumerable<string> paths)
+    {
+        var skipped = new List<string>();
+        foreach (var path in paths)
+        {
+            if (Directory.Exists(path)) { skipped.Add($"{Path.GetFileName(path)} is a folder"); continue; }
+            if (!File.Exists(path)) continue;
+            if (PendingAttachments.Any(f => string.Equals(f.Path, path, StringComparison.OrdinalIgnoreCase))) continue;
+            if (PendingAttachments.Count >= MaxAttachments) { skipped.Add($"only {MaxAttachments} files fit in one message"); break; }
+            if (new FileInfo(path).Length > MaxAttachmentBytes) { skipped.Add($"{Path.GetFileName(path)} is larger than 25 MB"); continue; }
+            PendingAttachments.Add(new AttachmentVm(path));
+        }
+        HasPendingAttachments = PendingAttachments.Count > 0;
+        Status = skipped.Count > 0 ? "Not attached: " + string.Join("; ", skipped) + "." : "";
+    }
+
+    [RelayCommand]
+    private void RemoveAttachment(AttachmentVm? attachment)
+    {
+        if (attachment is not null) PendingAttachments.Remove(attachment);
+        HasPendingAttachments = PendingAttachments.Count > 0;
+    }
+
+    // ---- generated files: whatever appears or changes in the output folder during a turn ----
+
+    private Dictionary<string, DateTime> SnapshotOutput()
+    {
+        var snapshot = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(_main.Settings.EffectiveOutputFolder, "*", SearchOption.AllDirectories).Take(5000))
+                snapshot[file] = File.GetLastWriteTimeUtc(file);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Reading the output folder failed", ex);
+        }
+        return snapshot;
+    }
+
+    private void ReportGeneratedFiles()
+    {
+        var after = SnapshotOutput();
+        var changed = after.Where(f => !_outputBefore.TryGetValue(f.Key, out var before) || before != f.Value)
+            .Select(f => f.Key).OrderBy(f => f, StringComparer.OrdinalIgnoreCase).Take(20).ToList();
+        _outputBefore = after;
+        if (changed.Count == 0) return;
+        Add(new GeneratedFilesVm(changed));
+        foreach (var file in changed) Persist("generated", file);
     }
 
     private bool CanStop() => IsBusy;
@@ -193,6 +283,8 @@ public sealed partial class ChatViewModel : ObservableObject
         Messages.Clear();
         _conversationId = null;
         _resumeSessionId = null;
+        PendingAttachments.Clear();
+        HasPendingAttachments = false;
         Title = NewChatTitle;
         Status = "";
         IsBusy = false;
@@ -210,15 +302,24 @@ public sealed partial class ChatViewModel : ObservableObject
         Status = "";
         IsBusy = false;
 
-        string? pendingImage = null;
+        var pendingFiles = new List<string>();
+        var generated = new List<string>();
+        void FlushGenerated()
+        {
+            if (generated.Count == 0) return;
+            Messages.Add(new GeneratedFilesVm(generated.ToList()));
+            generated.Clear();
+        }
         foreach (var m in _main.Store.GetMessages(conversation.Id))
         {
+            if (m.Kind != "generated") FlushGenerated();
             switch (m.Kind)
             {
-                case "image": pendingImage = m.Content; break;
+                case "image" or "file": pendingFiles.Add(m.Content); break;
+                case "generated": generated.Add(m.Content); break;
                 case "user":
-                    Messages.Add(new UserMessageVm(m.Content, pendingImage));
-                    pendingImage = null;
+                    Messages.Add(new UserMessageVm(m.Content, pendingFiles.ToList()));
+                    pendingFiles.Clear();
                     break;
                 case "assistant": Messages.Add(new AssistantMessageVm("", m.Content)); break;
                 case "error": Messages.Add(new ErrorVm(m.Content)); break;
@@ -229,6 +330,10 @@ public sealed partial class ChatViewModel : ObservableObject
                     break;
             }
         }
+
+        FlushGenerated();
+        PendingAttachments.Clear();
+        HasPendingAttachments = false;
 
         if (conversation.Model is { } modelId && Models.FirstOrDefault(m => m.Id == modelId) is { } model)
         {
@@ -243,7 +348,11 @@ public sealed partial class ChatViewModel : ObservableObject
 
     public void AddDemoImage(string path)
     {
-        Add(new UserMessageVm("What is going on in this code?", path));
+        Add(new UserMessageVm("What is going on in this code?", [path, @"C:\Users\you\source\repos\cdp-orchestrator\src\loader.py"]));
+        Add(new GeneratedFilesVm([@"C:\Users\you\Documents\Hark\sprint-42-open-items.csv", @"C:\Users\you\Documents\Hark\loader-review.md"]));
+        PendingAttachments.Add(new AttachmentVm(@"C:\Users\you\Documents\requirements.docx"));
+        PendingAttachments.Add(new AttachmentVm(@"C:\Users\you\Pictures\error-dialog.png"));
+        HasPendingAttachments = true;
     }
 
     public void LoadDemo(bool approvals)
@@ -282,7 +391,6 @@ public sealed partial class ChatViewModel : ObservableObject
         Messages.Add(new ApprovalVm(new ToolApprovalRequest("shell", "this command to run on your PC",
             "git checkout -b fix/blob-trigger-retry", false, ToolKind.Shell, "git checkout -b fix/blob-trigger-retry"), _ => { }));
         Messages.Add(new ToolCallVm("2", "martechchat: get_work_item") { IsRunning = false, Status = "Failed", Error = "Work item 9999 was not found." });
-        Messages.Add(new NoteVm("Blocked a git commit or push. Hark saves changes but leaves committing and pushing to you."));
         Messages.Add(new ErrorVm("Copilot could not be reached. Check your network connection and try again."));
         Status = "Waiting for your answer…";
     }
@@ -346,6 +454,7 @@ public sealed partial class ChatViewModel : ObservableObject
             case TurnIdle:
                 IsBusy = false;
                 Status = "";
+                ReportGeneratedFiles();
                 _ = ReportServerProblemsAsync();
                 break;
         }
@@ -371,13 +480,9 @@ public sealed partial class ChatViewModel : ObservableObject
 
     private Task<ToolApproval> ApproveAsync(ToolApprovalRequest request)
     {
-        // Hard rule, whatever else is allowed: Hark never commits or pushes.
-        if (request.Kind == ToolKind.Shell && RepoPolicy.IsCommitOrPush(request.Target))
-        {
-            Application.Current?.Dispatcher.BeginInvoke(() =>
-                Add(new NoteVm("Blocked a git commit or push. Hark saves changes but leaves committing and pushing to you.")));
-            return Task.FromResult(ToolApproval.DenyCommitOrPush);
-        }
+        // Saving into the output folder is what that folder is for, so it never asks.
+        if (request.Kind == ToolKind.Write && RepoPolicy.IsInside(_main.Settings.EffectiveOutputFolder, request.Target))
+            return Task.FromResult(ToolApproval.AllowOnce);
 
         // A file edit outside the repos folder always asks, even after "allow edits for this chat".
         var insideRepos = request.Kind != ToolKind.Write || RepoPolicy.IsInside(_main.Settings.ReposRoot, request.Target);

@@ -12,6 +12,9 @@ public sealed class AppSettings
     /// <summary>Folder that holds the user's cloned repositories, one per subfolder.</summary>
     public string? ReposRoot { get; set; }
 
+    /// <summary>Where files Copilot generates for the user are saved. Empty means Documents\Hark.</summary>
+    public string? OutputFolder { get; set; }
+
     /// <summary>True once the first-run default for ReposRoot has been considered.</summary>
     public bool ReposRootSuggested { get; set; }
     public bool CloseToTray { get; set; } = true;
@@ -22,6 +25,20 @@ public sealed class AppSettings
 
     public string EffectiveMcpConfigPath =>
         string.IsNullOrWhiteSpace(McpConfigPath) ? McpConfig.DefaultPath : McpConfigPath;
+
+    public static string DefaultOutputFolder =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Hark");
+
+    /// <summary>The output folder in use; created if it does not exist yet.</summary>
+    public string EffectiveOutputFolder
+    {
+        get
+        {
+            var path = string.IsNullOrWhiteSpace(OutputFolder) ? DefaultOutputFolder : OutputFolder;
+            try { Directory.CreateDirectory(path); } catch (Exception ex) { Log.Error($"Could not create {path}", ex); }
+            return path;
+        }
+    }
 
     public static AppSettings Load()
     {

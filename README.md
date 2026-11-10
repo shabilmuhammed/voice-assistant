@@ -8,8 +8,10 @@ A Windows desktop app that puts GitHub Copilot and your MCP tools in one window,
 - **Chat** with any model your Copilot plan offers. Answers stream in and are formatted (tables, code, lists).
 - **Your MCP tools**, read from the same `mcp.json` VS Code uses (`%APPDATA%\Code\User\mcp.json`).
 - **Tool approvals.** Tools that only read run straight away; anything else asks first.
-- **Work in your repos.** Copilot can pull, create a branch, edit and save files under your repositories folder.
-  It never commits or pushes: those commands are blocked in the app.
+- **Work in your repos.** Copilot can pull, create a branch, edit and save files under your repositories folder,
+  and commit and push when you ask, so a pull request can follow. Each command asks first unless you allow commands for that chat.
+- **Attach files and images.** Use the paperclip, drag files in, or paste an image.
+- **Generate files.** Files you ask for are saved in a folder you choose (Documents\Hark by default) and listed in the chat.
 - **Read your screen.** The screen button, or phrases like "my screen" and "this code", attach a capture of the
   whole desktop to your message.
 - **History.** Every chat is saved on this PC and can be reopened and continued.
@@ -30,7 +32,7 @@ The first build downloads the Copilot runtime (about 90 MB) from GitHub.
 
 1. **Connections:** paste your fine-grained GitHub PAT (it needs the Copilot Requests permission) and click Save and test.
 2. **Connections:** check your MCP servers are listed.
-3. **Settings:** check the Repositories folder. Hark fills in `%USERPROFILE%\source\repos` if it exists.
+3. **Settings:** check the Repositories folder (Hark fills in `%USERPROFILE%\source\repos` if it exists) and the Generated files folder.
 
 ## Where things are kept
 
@@ -40,7 +42,7 @@ Everything is on this PC, in `%LOCALAPPDATA%\Hark`:
 |---|---|
 | `settings.json` | Settings and the GitHub PAT, in plain text |
 | `chats.db` | Chat history |
-| `captures\` | Screen captures you sent (removed after 30 days) |
+| `captures\` | Screen captures and pasted images you sent (removed after 30 days) |
 | `hark.log` | Log, with the PAT and MCP tokens masked |
 | `workspace\` | Copilot's working folder when no repositories folder is set |
 
@@ -48,7 +50,7 @@ MCP tokens stay in `mcp.json`. Hark only reads that file.
 
 ## What leaves the PC
 
-Your messages, tool results and any screen capture you attach go to GitHub Copilot, using your PAT.
+Your messages, tool results and anything you attach (files, images, screen captures) go to GitHub Copilot, using your PAT.
 Your MCP servers talk to their own services (Azure DevOps, Purview) as they do in VS Code. Nothing else is sent anywhere.
 
 ## Projects

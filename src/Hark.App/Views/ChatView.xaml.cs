@@ -13,6 +13,7 @@ public partial class ChatView : UserControl
     public ChatView()
     {
         InitializeComponent();
+        DataObject.AddPastingHandler(InputBox, OnPaste);
         DataContextChanged += (_, e) => Bind(e.NewValue as ChatViewModel);
         Loaded += (_, _) =>
         {
@@ -46,6 +47,45 @@ public partial class ChatView : UserControl
         EmptyState.Visibility = _vm is null || _vm.Messages.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
     private void OnScrollRequested() => Scroller.ScrollToEnd();
+
+    // ---- attachments by drag and drop, and by paste ---------------------------------
+
+    private void OnDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void OnDrop(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetData(DataFormats.FileDrop) is string[] files) _vm?.AddAttachments(files);
+        e.Handled = true;
+    }
+
+    private void OnPaste(object sender, DataObjectPastingEventArgs e)
+    {
+        try
+        {
+            if (Clipboard.ContainsFileDropList())
+            {
+                _vm?.AddAttachments(Clipboard.GetFileDropList().Cast<string>().ToList());
+                e.CancelCommand();
+            }
+            else if (Clipboard.ContainsImage() && Clipboard.GetImage() is { } image)
+            {
+                var path = System.IO.Path.Combine(ScreenCapture.Folder, $"screen-pasted-{DateTime.Now:yyyyMMdd-HHmmss-fff}.png");
+                var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(image));
+                using (var stream = File.Create(path)) encoder.Save(stream);
+                _vm?.AddAttachments([path]);
+                e.CancelCommand();
+            }
+        }
+        catch (Exception ex)
+        {
+            Hark.Core.Log.Error("Pasting an attachment failed", ex);
+        }
+    }
 
     private void InputBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {

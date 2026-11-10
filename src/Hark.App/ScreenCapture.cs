@@ -92,7 +92,7 @@ public static class ScreenCapture
     {
         try
         {
-            foreach (var file in Directory.EnumerateFiles(Folder, "screen-*.jpg"))
+            foreach (var file in Directory.EnumerateFiles(Folder, "screen-*.*"))
                 if (File.GetLastWriteTime(file) < DateTime.Now.AddDays(-30)) File.Delete(file);
         }
         catch (Exception ex)

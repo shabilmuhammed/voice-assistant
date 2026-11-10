@@ -23,6 +23,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _mcpConfigPath = main.Settings.McpConfigPath ?? "";
         _reposRoot = main.Settings.ReposRoot ?? "";
         _reposNote = DescribeRepos(_reposRoot);
+        _outputFolder = main.Settings.OutputFolder ?? "";
         _startWithWindows = ReadStartWithWindows();
         _loading = false;
     }
@@ -49,6 +50,11 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _reposNote;
+
+    [ObservableProperty]
+    private string _outputFolder;
+
+    public string OutputDefault => AppSettings.DefaultOutputFolder;
 
     [ObservableProperty]
     private string _note = "";
@@ -100,6 +106,27 @@ public sealed partial class SettingsViewModel : ObservableObject
         _main.Settings.ReposRoot = path.Length == 0 ? null : path;
         ReposNote = DescribeRepos(path);
         Save();
+    }
+
+    partial void OnOutputFolderChanged(string value)
+    {
+        if (_loading) return;
+        var path = value.Trim().Trim('"');
+        _main.Settings.OutputFolder = path.Length == 0 ? null : path;
+        Save();
+    }
+
+    [RelayCommand]
+    private void OpenOutputFolder()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(_main.Settings.EffectiveOutputFolder) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Opening the output folder failed", ex);
+        }
     }
 
     private static string DescribeRepos(string path)

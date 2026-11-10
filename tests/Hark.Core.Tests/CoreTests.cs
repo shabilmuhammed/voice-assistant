@@ -108,20 +108,6 @@ public class LogTests
 
 public class RepoPolicyTests
 {
-    [Theory]
-    [InlineData("git commit -m \"x\"", true)]
-    [InlineData("git push origin feature/x", true)]
-    [InlineData("cd repo; git add -A; git commit -am wip", true)]
-    [InlineData("git -C C:\\src\\repo push", true)]
-    [InlineData("GIT.EXE Push --force", true)]
-    [InlineData("git status", false)]
-    [InlineData("git pull origin master", false)]
-    [InlineData("git checkout -b fix/commit-message-parser", false)]
-    [InlineData("git log --oneline | Select-String push", false)]
-    [InlineData("", false)]
-    public void Detects_commit_and_push(string command, bool expected) =>
-        Assert.Equal(expected, RepoPolicy.IsCommitOrPush(command));
-
     [Fact]
     public void Knows_which_paths_are_inside_the_repos_folder()
     {
@@ -131,5 +117,18 @@ public class RepoPolicyTests
         Assert.False(RepoPolicy.IsInside(root, Path.Combine(root, "..", "elsewhere", "a.cs")));
         Assert.False(RepoPolicy.IsInside(root, root + "-other"));
         Assert.False(RepoPolicy.IsInside(null, root));
+    }
+
+    [Fact]
+    public void Instructions_cover_generated_files_and_repository_work()
+    {
+        var withRepos = RepoPolicy.Instructions(@"C:\src\repos", @"C:\out");
+        Assert.Contains(@"C:\out", withRepos);
+        Assert.Contains(@"C:\src\repos", withRepos);
+        Assert.Contains("only when the user asks", withRepos);
+
+        var withoutRepos = RepoPolicy.Instructions(null, @"C:\out");
+        Assert.Contains(@"C:\out", withoutRepos);
+        Assert.DoesNotContain("repository_work", withoutRepos);
     }
 }
