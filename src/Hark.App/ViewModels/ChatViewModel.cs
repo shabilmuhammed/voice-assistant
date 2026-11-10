@@ -242,7 +242,7 @@ public sealed partial class ChatViewModel : ObservableObject
 
     public void AddDemoImage(string path)
     {
-        Messages.Insert(0, new UserMessageVm("What is going on in this code?", path));
+        Add(new UserMessageVm("What is going on in this code?", path));
     }
 
     public void LoadDemo()
