@@ -116,10 +116,20 @@ public sealed class VoiceEngine : IDisposable
         config.ModelConfig.Tokens = _models.KwsTokens;
         config.ModelConfig.NumThreads = 1;
         config.ModelConfig.Provider = "cpu";
-        config.KeywordsBuf = line;
-        config.KeywordsBufSize = System.Text.Encoding.UTF8.GetByteCount(line);
-        var spotter = new KeywordSpotter(config);
-        return (spotter, spotter.CreateStream());
+        // The phrase goes in through a UTF-8 file. Passing it as a string breaks on Windows, where the
+        // binding converts strings to the ANSI code page and the model's word-start mark ("▁") is lost.
+        var keywordsFile = Path.Combine(Path.GetTempPath(), $"hark-keywords-{Guid.NewGuid():N}.txt");
+        File.WriteAllText(keywordsFile, line + "\n", new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        try
+        {
+            config.KeywordsFile = keywordsFile;
+            var spotter = new KeywordSpotter(config);
+            return (spotter, spotter.CreateStream());
+        }
+        finally
+        {
+            try { File.Delete(keywordsFile); } catch { /* a leftover temp file is harmless */ }
+        }
     }
 
     /// <summary>Skips the wake phrase (push to talk, or the mic button).</summary>
