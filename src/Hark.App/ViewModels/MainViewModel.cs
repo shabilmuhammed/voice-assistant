@@ -1,0 +1,123 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using GitHub.Copilot;
+using Hark.Core;
+
+namespace Hark.App.ViewModels;
+
+public sealed partial class MainViewModel : ObservableObject
+{
+    public MainViewModel()
+    {
+        Settings = AppSettings.Load();
+        Store = new ChatStore();
+        Copilot = new CopilotService();
+        Chat = new ChatViewModel(this);
+        History = new HistoryViewModel(this);
+        Connections = new ConnectionsViewModel(this);
+        Preferences = new SettingsViewModel(this);
+        _currentPage = Chat;
+    }
+
+    public AppSettings Settings { get; }
+    public ChatStore Store { get; }
+    public CopilotService Copilot { get; }
+
+    public ChatViewModel Chat { get; }
+    public HistoryViewModel History { get; }
+    public ConnectionsViewModel Connections { get; }
+    public SettingsViewModel Preferences { get; }
+
+    [ObservableProperty]
+    private object _currentPage;
+
+    /// <summary>0 Chat, 1 History, 2 Connections, 3 Settings.</summary>
+    [ObservableProperty]
+    private int _selectedNavIndex;
+
+    [ObservableProperty]
+    private string _connectionStatus = "Not connected";
+
+    [ObservableProperty]
+    private bool _isConnected;
+
+    /// <summary>Raised when the window should come to the front (for example, a tool is waiting for approval).</summary>
+    public event Action? AttentionRequested;
+
+    public void RequestAttention() => AttentionRequested?.Invoke();
+
+    partial void OnSelectedNavIndexChanged(int value)
+    {
+        CurrentPage = value switch
+        {
+            1 => History,
+            2 => Connections,
+            3 => Preferences,
+            _ => Chat,
+        };
+        if (value == 1) History.Refresh();
+        if (value == 2) Connections.Reload();
+    }
+
+    public void ShowChat() => SelectedNavIndex = 0;
+
+    public async Task InitializeAsync()
+    {
+        Connections.Reload();
+        if (string.IsNullOrWhiteSpace(Settings.GitHubPat))
+        {
+            ConnectionStatus = "Add your GitHub PAT to get started";
+            SelectedNavIndex = 2;
+            return;
+        }
+        await ConnectAsync(Settings.GitHubPat);
+    }
+
+    public async Task<AuthResult> ConnectAsync(string pat)
+    {
+        ConnectionStatus = "Connecting to Copilot…";
+        IsConnected = false;
+        await Chat.CloseSessionAsync();
+
+        var result = await Copilot.ConnectAsync(pat);
+        IsConnected = result.Ok;
+        ConnectionStatus = result.Ok ? "Copilot connected" : "Copilot not connected";
+        if (!result.Ok) return result;
+
+        try
+        {
+            Chat.SetModels(await Copilot.GetModelsAsync());
+            Preferences.RefreshModels();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Listing models failed", ex);
+            return new AuthResult(true, $"{result.Message}, but the model list could not be loaded: {ex.Message}");
+        }
+        return result;
+    }
+
+    /// <summary>MCP servers from the VS Code mcp.json, minus the ones switched off in Connections.</summary>
+    public Dictionary<string, McpServerConfig> LoadMcpServers()
+    {
+        try
+        {
+            var path = Settings.EffectiveMcpConfigPath;
+            if (!File.Exists(path)) return new();
+            var loaded = McpConfig.Load(path);
+            Log.AddSecrets(loaded.Secrets);
+            foreach (var name in Settings.DisabledServers) loaded.Servers.Remove(name);
+            return loaded.Servers;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Reading mcp.json failed", ex);
+            return new();
+        }
+    }
+
+    public async Task ShutdownAsync()
+    {
+        await Chat.CloseSessionAsync();
+        await Copilot.DisposeAsync();
+    }
+}

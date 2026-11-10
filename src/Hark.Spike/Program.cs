@@ -2,6 +2,7 @@
 using System.Text;
 using GitHub.Copilot;
 using GitHub.Copilot.Rpc;
+using Hark.Core;
 using Hark.Spike;
 
 // Hark spike: proves the pieces the full app depends on, on the real laptop.

@@ -3,25 +3,44 @@ name: Build
 on:
   push:
     branches: ["**"]
-    paths: ["src/**", ".github/workflows/build.yml"]
+    paths: ["src/**", "tests/**", "Hark.sln", ".github/workflows/build.yml"]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  spike:
+  windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - name: Publish spike (self-contained, no .NET install needed on the laptop)
+
+      - name: Test
+        run: dotnet test tests/Hark.Core.Tests/Hark.Core.Tests.csproj -c Release
+
+      - name: Publish app (self-contained, no .NET install needed on the laptop)
+        run: dotnet publish src/Hark.App/Hark.App.csproj -c Release -r win-x64 --self-contained true -o out/hark
+
+      - name: Publish spike
         run: dotnet publish src/Hark.Spike/Hark.Spike.csproj -c Release -r win-x64 --self-contained true -o out/hark-spike
-      - name: List output
+
+      - name: Check the Copilot runtime is in the app folder
         shell: pwsh
-        run: Get-ChildItem out/hark-spike -Recurse | Select-Object FullName, Length | Format-Table -AutoSize
+        run: |
+          $found = Get-ChildItem out/hark -Recurse -Filter "copilot*" | Select-Object -ExpandProperty FullName
+          $found
+          if (-not $found) { throw "Copilot runtime files are missing from the published app." }
+          if (-not (Test-Path out/hark/Hark.exe)) { throw "Hark.exe is missing." }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hark-win-x64
+          path: out/hark
+          retention-days: 14
+
       - uses: actions/upload-artifact@v4
         with:
           name: hark-spike-win-x64

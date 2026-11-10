@@ -1,7 +1,7 @@
 using System.Text.Json;
 using GitHub.Copilot;
 
-namespace Hark.Spike;
+namespace Hark.Core;
 
 /// <summary>Reads a VS Code style mcp.json (top-level "servers") into Copilot SDK server configs.</summary>
 public static class McpConfig
