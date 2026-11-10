@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Hark.Voice</RootNamespace>
+    <ModelsDir>$(MSBuildThisFileDirectory)..\..\models\</ModelsDir>
+    <ModelsBase>https://github.com/k2-fsa/sherpa-onnx/releases/download</ModelsBase>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="org.k2fsa.sherpa.onnx" Version="2.0.1" />
+  </ItemGroup>
+
+  <!-- Downloads the free, offline voice models once into <repo>/models (about 300 MB). Skip with -p:SkipVoiceModels=true. -->
+  <Target Name="FetchVoiceModels" BeforeTargets="Build" Condition="'$(SkipVoiceModels)' != 'true' And !Exists('$(ModelsDir).complete')">
+    <Message Importance="high" Text="Downloading voice models into $(ModelsDir) (one time, about 300 MB)..." />
+    <MakeDir Directories="$(ModelsDir)" />
+    <DownloadFile SourceUrl="$(ModelsBase)/kws-models/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2" DestinationFolder="$(ModelsDir)" DestinationFileName="kws.tar.bz2" Retries="3" />
+    <DownloadFile SourceUrl="$(ModelsBase)/asr-models/sherpa-onnx-moonshine-base-en-int8.tar.bz2" DestinationFolder="$(ModelsDir)" DestinationFileName="stt.tar.bz2" Retries="3" />
+    <DownloadFile SourceUrl="$(ModelsBase)/asr-models/silero_vad.onnx" DestinationFolder="$(ModelsDir)" DestinationFileName="silero_vad.onnx" Retries="3" />
+    <Exec Command="tar -xjf kws.tar.bz2" WorkingDirectory="$(ModelsDir)" />
+    <Exec Command="tar -xjf stt.tar.bz2" WorkingDirectory="$(ModelsDir)" />
+    <Delete Files="$(ModelsDir)kws.tar.bz2;$(ModelsDir)stt.tar.bz2" />
+    <WriteLinesToFile File="$(ModelsDir).complete" Lines="ok" Overwrite="true" />
+  </Target>
+</Project>

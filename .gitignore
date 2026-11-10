@@ -7,3 +7,6 @@ settings.json
 bin/
 obj/
 *.log
+
+# downloaded voice models
+models/
