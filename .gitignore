@@ -4,3 +4,6 @@ out/
 # local config with plain-text tokens
 mcp.json
 settings.json
+bin/
+obj/
+*.log

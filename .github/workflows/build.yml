@@ -1,0 +1,29 @@
+name: Build
+
+on:
+  push:
+    branches: ["**"]
+    paths: ["src/**", ".github/workflows/build.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  spike:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Publish spike (self-contained, no .NET install needed on the laptop)
+        run: dotnet publish src/Hark.Spike/Hark.Spike.csproj -c Release -r win-x64 --self-contained true -o out/hark-spike
+      - name: List output
+        shell: pwsh
+        run: Get-ChildItem out/hark-spike -Recurse | Select-Object FullName, Length | Format-Table -AutoSize
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hark-spike-win-x64
+          path: out/hark-spike
+          retention-days: 14
