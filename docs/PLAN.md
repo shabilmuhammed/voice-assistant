@@ -12,8 +12,8 @@ No VS Code required. The clickable mock is in `design/mockup.html`.
 | Shell | Electron + React + TypeScript (tray, global shortcut, autostart) | MIT |
 | Wake phrase, STT, VAD | `sherpa-onnx-node` (open-vocabulary keyword spotting, local ASR) | Apache-2.0 |
 | TTS | Windows built-in voices (optional local sherpa-onnx voices) | free |
-| Microsoft sign-in | Browser SSO as today, DPAPI-encrypted cache, no app registration | free |
-| Secrets | Electron `safeStorage` (Windows DPAPI) | free |
+| Microsoft sign-in | Browser SSO as today, login cached until expiry, no app registration | free |
+| Tokens | Plain text in `mcp.json` / `settings.json` on the laptop | free |
 | Chats | Local SQLite + SDK session ids for resume | free |
 | Installer / updates | electron-builder, unsigned, GitHub Releases | free (no code-signing cert) |
 
@@ -39,10 +39,16 @@ No VS Code required. The clickable mock is in `design/mockup.html`.
 
 The phase 0 spike settles the first two on a real machine.
 
-## How secrets reach MCP servers
+## Config and tokens (decided)
 
-MCP configs reference secrets by name (`${secret:ado_pat}`); the app resolves them at launch into
-the server's env (stdio) or headers (HTTP).
+- The app runs on one work laptop only. Tokens are stored in plain text, by the owner's choice.
+- `mcp.json` is the single source for MCP servers and holds their tokens directly (for example the
+  Azure DevOps PAT in `env`). Same shape as the VS Code file, so the existing one imports unchanged.
+- The Copilot PAT is stored the same way in the app's `settings.json`.
+- The custom MCP servers are local .NET projects started with `dotnet run --project <path>.csproj`.
+  `dotnet run` rebuilds on start and is slow, so the app starts each server once and keeps it running
+  while it sits in the tray. Pointing at the built DLL instead is an optional speed-up.
+- `mcp.json` and `settings.json` are git-ignored so tokens cannot be committed by accident.
 
 ## Purview sign-in (no app registration, no service principal)
 
@@ -53,8 +59,8 @@ Two levels, both free:
 - **A. Zero change to the server.** The app keeps the Purview server process alive while it sits in
   the tray, so the login is reused until it expires. Quitting the app loses it (in-memory cache).
 - **B. Cache survives restarts, and accounts appear in the Connections tab.** Either the server turns
-  on its library's persistent token cache (a few lines, e.g. `TokenCachePersistenceOptions` in
-  azure-identity), or the app performs the same browser sign-in with the same public client the
+  on its library's persistent token cache (a few lines of C#, e.g. `TokenCachePersistenceOptions`
+  in Azure.Identity), or the app performs the same browser sign-in with the same public client the
   server already uses, stores the cache with Windows DPAPI, and hands the token to the server.
 
 B is the target. Which variant depends on the server's login code (open question 2).
@@ -63,7 +69,7 @@ B is the target. Which variant depends on the server's login code (open question
 
 0. **Spike (1 to 2 days)**: PAT, list models, one prompt, one existing MCP tool call, on Windows.
 1. **Chat core**: shell, tray, streaming chat, model picker, tool approvals, History tab.
-2. **Connections**: vault, Azure DevOps PAT, MCP manager with VS Code import, Microsoft accounts.
+2. **Connections**: Copilot PAT, `mcp.json` editor with VS Code import, Microsoft accounts.
 3. **Voice**: wake phrase, push to talk, STT, spoken answers, floating bar.
 4. **Ship**: installer, auto-update, first-run setup.
 
@@ -76,7 +82,6 @@ B is the target. Which variant depends on the server's login code (open question
 
 ## Open questions
 
-1. Current VS Code `mcp.json` (secrets removed): transport and launch command per server.
-2. The Purview MCP tool's login code: language, library and credential type.
-3. Spoken answers by default, or text only?
-4. Electron (fast to build, 150 to 250 MB idle) or native .NET (lighter, slower to build)?
+1. The Purview MCP tool's login code: the C# lines that create the credential.
+2. Spoken answers by default, or text only?
+3. Electron (fast to build, 150 to 250 MB idle) or native .NET (lighter, slower to build)?
