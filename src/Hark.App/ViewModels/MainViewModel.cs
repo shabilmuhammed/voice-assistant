@@ -9,6 +9,14 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel()
     {
         Settings = AppSettings.Load();
+        if (!Settings.ReposRootSuggested)
+        {
+            // First run: if the usual Visual Studio repos folder exists, start with it. It can be changed or cleared in Settings.
+            var usual = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "source", "repos");
+            if (string.IsNullOrWhiteSpace(Settings.ReposRoot) && Directory.Exists(usual)) Settings.ReposRoot = usual;
+            Settings.ReposRootSuggested = true;
+            try { Settings.Save(); } catch (Exception ex) { Log.Error("Saving settings failed", ex); }
+        }
         Store = new ChatStore();
         Copilot = new CopilotService();
         Chat = new ChatViewModel(this);
@@ -122,14 +130,14 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>Sample content for screenshots. Nothing is sent or saved.</summary>
-    public void LoadDemo(int page)
+    public void LoadDemo(int page, bool approvals = false)
     {
         _demo = true;
         ConnectionStatus = "Copilot connected";
         IsConnected = true;
         Chat.SetModels([new("auto", "Auto", true), new("claude-sonnet-5.5", "Claude Sonnet 5.5", true), new("gpt-6-luna", "GPT-6 Luna", true)]);
         Preferences.RefreshModels();
-        Chat.LoadDemo();
+        Chat.LoadDemo(approvals);
         History.LoadDemo();
         Connections.LoadDemo();
         SelectedNavIndex = page;

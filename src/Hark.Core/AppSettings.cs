@@ -11,6 +11,9 @@ public sealed class AppSettings
 
     /// <summary>Folder that holds the user's cloned repositories, one per subfolder.</summary>
     public string? ReposRoot { get; set; }
+
+    /// <summary>True once the first-run default for ReposRoot has been considered.</summary>
+    public bool ReposRootSuggested { get; set; }
     public bool CloseToTray { get; set; } = true;
     public bool AutoApproveReadOnlyTools { get; set; } = true;
     public List<string> DisabledServers { get; set; } = new();

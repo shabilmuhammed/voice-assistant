@@ -21,11 +21,12 @@ jobs:
       - name: Test
         run: dotnet test tests/Hark.Core.Tests/Hark.Core.Tests.csproj -c Release
 
+      - name: Test voice engine (future feature; models are not bundled in the app)
+        continue-on-error: true
+        run: dotnet test tests/Hark.Voice.Tests/Hark.Voice.Tests.csproj -c Release -p:FetchVoiceModels=true
+
       - name: Publish app (self-contained, no .NET install needed on the laptop)
         run: dotnet publish src/Hark.App/Hark.App.csproj -c Release -r win-x64 --self-contained true -o out/hark
-
-      - name: Publish spike
-        run: dotnet publish src/Hark.Spike/Hark.Spike.csproj -c Release -r win-x64 --self-contained true -o out/hark-spike
 
       - name: Check the Copilot runtime is in the app folder
         shell: pwsh
@@ -59,6 +60,8 @@ jobs:
           }
           Shot "chat-light" 0 $false
           Shot "chat-capture" 0 $false "--demo-capture"
+          Shot "chat-approvals" 0 $false "--demo-approvals"
+          Shot "chat-approvals-dark" 0 $true "--demo-approvals"
           Shot "history-light" 1 $false
           Shot "connections-light" 2 $false
           Shot "settings-light" 3 $false
@@ -95,10 +98,4 @@ jobs:
         with:
           name: hark-win-x64
           path: out/hark
-          retention-days: 14
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: hark-spike-win-x64
-          path: out/hark-spike
           retention-days: 14

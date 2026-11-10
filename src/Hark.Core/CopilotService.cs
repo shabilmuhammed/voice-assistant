@@ -186,6 +186,30 @@ public sealed class ChatSession : IAsyncDisposable
         return session.SendAsync(message);
     }
 
+    /// <summary>MCP servers that are not connected, with the reason when the runtime gives one.</summary>
+    public async Task<IReadOnlyList<(string Name, string Status, string Error)>> GetServerProblemsAsync()
+    {
+        var problems = new List<(string, string, string)>();
+        try
+        {
+            if (_session is null) return problems;
+            var list = await _session.Rpc.Mcp.ListAsync();
+            foreach (var server in list.Servers)
+            {
+                var status = server.Status.ToString() ?? "";
+                var error = server.Error ?? "";
+                var healthy = error.Length == 0 && !status.Contains("fail", StringComparison.OrdinalIgnoreCase)
+                              && !status.Contains("error", StringComparison.OrdinalIgnoreCase);
+                if (!healthy) problems.Add((server.Name, status, error));
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Reading MCP server status failed", ex);
+        }
+        return problems;
+    }
+
     public Task AbortAsync() => _session?.AbortAsync() ?? Task.CompletedTask;
 
     public Task SetModelAsync(string model) => _session?.SetModelAsync(model) ?? Task.CompletedTask;

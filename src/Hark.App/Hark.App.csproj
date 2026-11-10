@@ -10,6 +10,7 @@
     <AssemblyName>Hark</AssemblyName>
     <RootNamespace>Hark.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\hark.ico</ApplicationIcon>
     <NoWarn>$(NoWarn);WPF0001;WFO0003</NoWarn>
   </PropertyGroup>
   <ItemGroup>
@@ -19,7 +20,11 @@
     <Using Include="System.IO" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="Assets\hark.ico" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Markdig" Version="1.6.0" />
     <ProjectReference Include="..\Hark.Core\Hark.Core.csproj" />
   </ItemGroup>
 </Project>

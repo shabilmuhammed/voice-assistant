@@ -17,6 +17,7 @@ public sealed partial class ChatViewModel : ObservableObject
     private long? _conversationId;
     private string? _resumeSessionId;
     private bool _suppressModelChange;
+    private bool _serversChecked;
 
     public ChatViewModel(MainViewModel main) => _main = main;
 
@@ -245,16 +246,43 @@ public sealed partial class ChatViewModel : ObservableObject
         Add(new UserMessageVm("What is going on in this code?", path));
     }
 
-    public void LoadDemo()
+    public void LoadDemo(bool approvals)
     {
         Title = "Ingestion pipeline: sprint status";
         Messages.Add(new UserMessageVm("What is still open on the ingestion pipeline repo this sprint?"));
         Messages.Add(new ToolCallVm("1", "martechchat: search_work_items") { IsRunning = false, Status = "Done" });
-        Messages.Add(new AssistantMessageVm("a", "Three items are still open in Sprint 42:\n\n#4812  Null schema crashes the bronze loader (Bug)\n#4790  Add retry policy to the blob trigger (Task)\n#4755  Backfill job for March partitions (Task)"));
+        if (!approvals)
+        {
+        Messages.Add(new AssistantMessageVm("a", """
+            Three items are still open in **Sprint 42**:
+
+            | Id | Title | Type |
+            |---|---|---|
+            | #4812 | Null schema crashes the bronze loader | Bug |
+            | #4790 | Add retry policy to the blob trigger | Task |
+            | #4755 | Backfill job for March partitions | Task |
+
+            The bug is the urgent one. The loader fails in `load_bronze()` when the schema is missing:
+
+            ```python
+            def load_bronze(frame):
+                schema = frame.schema  # None for empty files
+                return write(frame, schema.names)
+            ```
+
+            1. Guard against an empty schema.
+            2. Add a test with a zero-row file.
+            """));
+            return;
+        }
+        Messages.Add(new AssistantMessageVm("a", "Three items are still open in **Sprint 42**."));
         Messages.Add(new UserMessageVm("File a bug for the retry gap and assign it to me."));
         Messages.Add(new ApprovalVm(new ToolApprovalRequest("demo", "martechchat: create_bug",
             "{\n  \"title\": \"Blob trigger has no retry policy\",\n  \"assignedTo\": \"me\"\n}", false), _ => { }));
+        Messages.Add(new ApprovalVm(new ToolApprovalRequest("shell", "this command to run on your PC",
+            "git checkout -b fix/blob-trigger-retry", false, ToolKind.Shell, "git checkout -b fix/blob-trigger-retry"), _ => { }));
         Messages.Add(new ToolCallVm("2", "martechchat: get_work_item") { IsRunning = false, Status = "Failed", Error = "Work item 9999 was not found." });
+        Messages.Add(new NoteVm("Blocked a git commit or push. Hark saves changes but leaves committing and pushing to you."));
         Messages.Add(new ErrorVm("Copilot could not be reached. Check your network connection and try again."));
         Status = "Waiting for your answer…";
     }
@@ -263,6 +291,7 @@ public sealed partial class ChatViewModel : ObservableObject
     {
         CancelPendingApprovals();
         _alwaysAllowed.Clear();
+        _serversChecked = false;
         if (_session is { } session)
         {
             _session = null;
@@ -317,8 +346,18 @@ public sealed partial class ChatViewModel : ObservableObject
             case TurnIdle:
                 IsBusy = false;
                 Status = "";
+                _ = ReportServerProblemsAsync();
                 break;
         }
+    }
+
+    /// <summary>Once per session, says which MCP servers did not start, so a missing tool is not a mystery.</summary>
+    private async Task ReportServerProblemsAsync()
+    {
+        if (_serversChecked || _session is not { } session) return;
+        _serversChecked = true;
+        foreach (var server in await session.GetServerProblemsAsync())
+            Add(new NoteVm($"The {server.Name} server is not available ({server.Status}){(server.Error.Length > 0 ? ": " + server.Error : ".")}"));
     }
 
     private AssistantMessageVm Streaming(string messageId)

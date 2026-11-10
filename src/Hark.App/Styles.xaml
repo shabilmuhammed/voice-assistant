@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:c="clr-namespace:Hark.App.Converters">
+                    xmlns:c="clr-namespace:Hark.App.Converters"
+                    xmlns:ctl="clr-namespace:Hark.App.Controls">
 
     <c:BoolToVisibilityConverter x:Key="BoolToVisibility" />
     <c:TextToVisibilityConverter x:Key="TextToVisibility" />
@@ -56,6 +57,26 @@
                 <ControlTemplate TargetType="TextBox">
                     <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
                                   HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Formatted answers: no text-box chrome, grows to fit its content. -->
+    <Style TargetType="ctl:MarkdownView">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ctl:MarkdownView">
+                    <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                  HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

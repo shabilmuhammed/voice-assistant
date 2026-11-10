@@ -63,15 +63,26 @@ app. The login is lost only when the server process stops. Two free ways to make
    login. The app reads that record (account name only, no secret) to show status in Connections;
    "Sign out" deletes it.
 
-## Phases
+## Status
 
-0. **Spike**: console app. PAT, list models, one prompt, one `martechchat` tool call.
-1. **Chat core**: WPF shell, tray, streaming chat, model picker, tool approvals, History.
-2. **Connections**: Copilot PAT, server list and status from `mcp.json`, Purview sign-in status.
-3. **Voice**: wake phrase, push to talk, speech to text, floating bar.
-4. **Ship**: publish folder, start with Windows, first-run setup.
+Done:
+
+- Spike on the laptop: PAT accepted on its own, six models listed, MCP servers started outside VS Code.
+- Chat core: streaming chat, model picker, tool approvals, history with resume, tray, settings.
+- Formatted answers (tables, code blocks, lists, links).
+- Repository work: sessions start in the repositories folder with standing rules; `git commit` and `git push`
+  are blocked in code; edits outside that folder always ask.
+- Screen reading: whole-desktop capture attached to a message, by button or by phrase.
+- Windows build on GitHub Actions with tests, a zip to download and screenshots of every screen.
+
+Future:
+
+- "Hey Chat" wake phrase with an on-screen indicator. The offline engine (`src/Hark.Voice`) is written and tested
+  on recorded clips; microphone capture, the indicator, voice settings and model bundling are not started.
+- Keep MCP servers running between chats (each new chat currently restarts them).
+- Purview sign-in that survives an app restart (`az login`, or a persistent token cache in the server).
 
 ## Open questions
 
 1. Is Azure CLI installed (option 1 above), or should the tool get the cache patch (option 2)?
-2. `dotnet --version` on the laptop.
+2. Should Copilot's built-in GitHub tools stay on?

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:Hark.App.ViewModels"
         xmlns:v="clr-namespace:Hark.App.Views"
-        Title="Hark" Width="1060" Height="720" MinWidth="780" MinHeight="520"
+        Title="Hark" Icon="/Assets/hark.ico" Width="1060" Height="720" MinWidth="780" MinHeight="520"
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:ChatViewModel}"><v:ChatView /></DataTemplate>

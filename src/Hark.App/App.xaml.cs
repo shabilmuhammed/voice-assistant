@@ -52,7 +52,7 @@ public partial class App : Application
         _window.Show();
         if (demo)
         {
-            _main.LoadDemo(PageArg(e.Args));
+            _main.LoadDemo(PageArg(e.Args), approvals: e.Args.Contains("--demo-approvals"));
             if (e.Args.Contains("--demo-capture")) _ = DemoCaptureAsync();
         }
         else
@@ -86,7 +86,7 @@ public partial class App : Application
 
             _tray = new System.Windows.Forms.NotifyIcon
             {
-                Icon = System.Drawing.SystemIcons.Application,
+                Icon = TrayIcon(),
                 Text = "Hark",
                 Visible = true,
                 ContextMenuStrip = menu,
@@ -101,6 +101,22 @@ public partial class App : Application
             Log.Error("Could not create the tray icon; closing the window will quit instead.", ex);
             _tray = null;
         }
+    }
+
+    private static System.Drawing.Icon TrayIcon()
+    {
+        try
+        {
+            var resource = GetResourceStream(new Uri("pack://application:,,,/Assets/hark.ico"));
+            if (resource is not null)
+                using (resource.Stream)
+                    return new System.Drawing.Icon(resource.Stream, System.Windows.Forms.SystemInformation.SmallIconSize);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Loading the tray icon failed; using the default one.", ex);
+        }
+        return System.Drawing.SystemIcons.Application;
     }
 
     private void ShowWindow()
