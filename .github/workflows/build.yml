@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # only used to publish screenshots to the ci-screenshots branch
 
 jobs:
   windows:
@@ -64,6 +64,23 @@ jobs:
           Shot "chat-dark" 0 $true
           Shot "connections-dark" 2 $true
           Get-ChildItem shots
+
+      - name: Publish screenshots to the ci-screenshots branch
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          if (-not (Test-Path shots/*.png)) { Write-Host "No screenshots to publish."; exit 0 }
+          $url = git remote get-url origin
+          $auth = git config --get-all http.https://github.com/.extraheader
+          Push-Location shots
+          git init -q -b ci-screenshots
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config http.https://github.com/.extraheader "$auth"
+          git add *.png
+          git commit -q -m "Screenshots for $env:GITHUB_SHA"
+          git push -f $url ci-screenshots
+          Pop-Location
 
       - uses: actions/upload-artifact@v4
         if: always()
