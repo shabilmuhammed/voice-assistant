@@ -200,6 +200,20 @@ public sealed partial class ChatViewModel : ObservableObject
 
     public long? CurrentConversationId => _conversationId;
 
+    public void LoadDemo()
+    {
+        Title = "Ingestion pipeline: sprint status";
+        Messages.Add(new UserMessageVm("What is still open on the ingestion pipeline repo this sprint?"));
+        Messages.Add(new ToolCallVm("1", "martechchat: search_work_items") { IsRunning = false, Status = "Done" });
+        Messages.Add(new AssistantMessageVm("a", "Three items are still open in Sprint 42:\n\n#4812  Null schema crashes the bronze loader (Bug)\n#4790  Add retry policy to the blob trigger (Task)\n#4755  Backfill job for March partitions (Task)"));
+        Messages.Add(new UserMessageVm("File a bug for the retry gap and assign it to me."));
+        Messages.Add(new ApprovalVm(new ToolApprovalRequest("demo", "martechchat: create_bug",
+            "{\n  \"title\": \"Blob trigger has no retry policy\",\n  \"assignedTo\": \"me\"\n}", false), _ => { }));
+        Messages.Add(new ToolCallVm("2", "martechchat: get_work_item") { IsRunning = false, Status = "Failed", Error = "Work item 9999 was not found." });
+        Messages.Add(new ErrorVm("Copilot could not be reached. Check your network connection and try again."));
+        Status = "Waiting for your answer…";
+    }
+
     public async Task CloseSessionAsync()
     {
         CancelPendingApprovals();

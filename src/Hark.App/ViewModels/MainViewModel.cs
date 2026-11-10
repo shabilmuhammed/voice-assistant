@@ -27,6 +27,8 @@ public sealed partial class MainViewModel : ObservableObject
     public ConnectionsViewModel Connections { get; }
     public SettingsViewModel Preferences { get; }
 
+    private bool _demo;
+
     [ObservableProperty]
     private object _currentPage;
 
@@ -54,6 +56,7 @@ public sealed partial class MainViewModel : ObservableObject
             3 => Preferences,
             _ => Chat,
         };
+        if (_demo) return;
         if (value == 1) History.Refresh();
         if (value == 2) Connections.Reload();
     }
@@ -113,6 +116,20 @@ public sealed partial class MainViewModel : ObservableObject
             Log.Error("Reading mcp.json failed", ex);
             return new();
         }
+    }
+
+    /// <summary>Sample content for screenshots. Nothing is sent or saved.</summary>
+    public void LoadDemo(int page)
+    {
+        _demo = true;
+        ConnectionStatus = "Copilot connected";
+        IsConnected = true;
+        Chat.SetModels([new("auto", "Auto", true), new("claude-sonnet-5.5", "Claude Sonnet 5.5", true), new("gpt-6-luna", "GPT-6 Luna", true)]);
+        Preferences.RefreshModels();
+        Chat.LoadDemo();
+        History.LoadDemo();
+        Connections.LoadDemo();
+        SelectedNavIndex = page;
     }
 
     public async Task ShutdownAsync()

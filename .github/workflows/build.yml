@@ -35,6 +35,44 @@ jobs:
           if (-not $found) { throw "Copilot runtime files are missing from the published app." }
           if (-not (Test-Path out/hark/Hark.exe)) { throw "Hark.exe is missing." }
 
+      - name: Screenshots of each screen with sample data
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          New-Item -ItemType Directory -Force shots | Out-Null
+          function Shot($name, $page, $dark) {
+            $v = if ($dark) { 0 } else { 1 }
+            $key = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+            New-Item -Path $key -Force | Out-Null
+            Set-ItemProperty -Path $key -Name AppsUseLightTheme -Value $v -Type DWord
+            $p = Start-Process -FilePath "out/hark/Hark.exe" -ArgumentList "--demo","--page",$page -PassThru
+            Start-Sleep -Seconds 8
+            $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
+            $bmp.Save("shots/$name.png", [System.Drawing.Imaging.ImageFormat]::Png)
+            $g.Dispose(); $bmp.Dispose()
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 1
+          }
+          Shot "chat-light" 0 $false
+          Shot "history-light" 1 $false
+          Shot "connections-light" 2 $false
+          Shot "settings-light" 3 $false
+          Shot "chat-dark" 0 $true
+          Shot "connections-dark" 2 $true
+          Get-ChildItem shots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: shots
+          retention-days: 7
+          if-no-files-found: ignore
+
       - uses: actions/upload-artifact@v4
         with:
           name: hark-win-x64

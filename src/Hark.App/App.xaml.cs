@@ -45,9 +45,18 @@ public partial class App : Application
             }
         };
 
-        CreateTray();
+        // "--demo" fills the screens with sample data and talks to nothing; used for automated screenshots.
+        var demo = e.Args.Contains("--demo");
+        if (!demo) CreateTray();
         _window.Show();
-        _ = _main.InitializeAsync();
+        if (demo) _main.LoadDemo(PageArg(e.Args));
+        else _ = _main.InitializeAsync();
+    }
+
+    private static int PageArg(string[] args)
+    {
+        var i = Array.IndexOf(args, "--page");
+        return i >= 0 && i + 1 < args.Length && int.TryParse(args[i + 1], out var page) ? page : 0;
     }
 
     private void CreateTray()

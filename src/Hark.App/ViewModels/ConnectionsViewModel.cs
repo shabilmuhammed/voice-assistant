@@ -134,6 +134,17 @@ public sealed partial class ConnectionsViewModel : ObservableObject
         }
     }
 
+    public void LoadDemo()
+    {
+        PatStatus = "Token accepted. 6 models available.";
+        McpPath = @"C:\Users\you\AppData\Roaming\Code\User\mcp.json";
+        McpStatus = "2 servers found.";
+        Servers.Clear();
+        Servers.Add(new ServerVm("ado-mcp", "npx package", true, _ => { }));
+        Servers.Add(new ServerVm("martechchat", ".NET project on this PC", true, _ => { }));
+        Warnings = "sonarqube: uses ${input:...}, which only VS Code can fill in. Put the value in directly.";
+    }
+
     private void OnServerToggled(ServerVm server)
     {
         var disabled = _main.Settings.DisabledServers;
