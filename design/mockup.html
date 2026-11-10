@@ -188,7 +188,7 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
 <div class="wrap">
   <header class="top">
     <h1>Hark, a voice and chat desktop app for your Copilot tools</h1>
-    <p class="lede">A Windows app that sits in the tray, wakes on “Hey Chat”, and runs your prompts through GitHub Copilot with your Azure DevOps and Purview MCP tools. No VS Code needed. “Hark” is a working name. The mock below is clickable; all data in it is example data.</p>
+    <p class="lede">A native .NET Windows app that sits in the tray, wakes on “Hey Chat”, and runs your prompts through GitHub Copilot with your Azure DevOps and Purview MCP tools. No VS Code needed. “Hark” is a working name. The mock below is clickable; all data in it is example data.</p>
   </header>
 
   <section class="stage" aria-label="Application mock">
@@ -197,7 +197,6 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
         <button type="button" data-v="idle" aria-pressed="true">Idle</button>
         <button type="button" data-v="listen" aria-pressed="false">Heard “Hey Chat”</button>
         <button type="button" data-v="think" aria-pressed="false">Working</button>
-        <button type="button" data-v="speak" aria-pressed="false">Speaking</button>
       </div>
       <span class="small">Switch voice states here. Use the left menu inside the app to change tabs.</span>
     </div>
@@ -242,7 +241,7 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
               <div class="bubble">What is still open on the ingestion pipeline repo this sprint?</div>
             </div>
             <div class="msg">
-              <div class="tool"><span class="pill ok">Done</span><span><b>azure-devops</b> ran <span class="mono">search_work_items</span></span><span>1.2 s</span></div>
+              <div class="tool"><span class="pill ok">Done</span><span><b>martechchat</b> ran <span class="mono">search_work_items</span></span><span>1.2 s</span></div>
               <p>Three items are still open in Sprint 42:</p>
               <div class="tablebox"><table class="items">
                 <tr><td>#4812</td><td>Null schema crashes the bronze loader</td><td><span class="pill err">Bug</span></td></tr>
@@ -260,7 +259,7 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
                 <div class="row"><button class="btn primary" type="button">Sign in with Microsoft</button><button class="btn" type="button">Skip Purview for now</button></div>
               </div>
               <div class="ask">
-                <div><b>Allow azure-devops to create a work item?</b><br><span class="small">Bug “Blob trigger has no retry policy”, assigned to you, in Data Platform.</span></div>
+                <div><b>Allow martechchat to create a work item?</b><br><span class="small">Bug “Blob trigger has no retry policy”, assigned to you, in Data Platform.</span></div>
                 <div class="row"><button class="btn primary" type="button">Allow once</button><button class="btn" type="button">Always allow this tool</button><button class="btn" type="button">Deny</button></div>
               </div>
             </div>
@@ -300,7 +299,7 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
 
         <!-- CONNECTIONS -->
         <div class="view" role="tabpanel" id="p-conn">
-          <div class="viewhead"><h3>Connections</h3><span class="small">Saved as plain files on this laptop: mcp.json and settings.json.</span></div>
+          <div class="viewhead"><h3>Connections</h3><span class="small">Plain files on this laptop. Nothing is sent anywhere else.</span></div>
           <div class="scroll">
             <div class="sect">
               <header><h3>GitHub Copilot</h3><span class="pill ok">Verified</span></header>
@@ -311,31 +310,32 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
             <div class="sect">
               <header><h3>Azure DevOps</h3><span class="pill ok">Connected</span></header>
               <div class="rows">
-                <div class="crow"><svg class="icon"><use href="#i-key"/></svg><div class="main"><b>dev.azure.com/contoso</b><span class="mono">PAT ••••••••h3Lp, expires in 21 days</span></div><button class="btn" type="button">Replace</button><button class="btn" type="button">Test</button></div>
+                <div class="crow"><svg class="icon"><use href="#i-key"/></svg><div class="main"><b>ADO_PAT in mcp.json</b><span class="mono">••••••••h3Lp</span></div><button class="btn" type="button">Replace</button><button class="btn" type="button">Test</button></div>
               </div>
             </div>
             <div class="sect">
-              <header><h3>Microsoft accounts</h3><button class="btn primary" type="button">Add account</button></header>
+              <header><h3>Purview sign-in</h3><span class="pill ok">Signed in</span></header>
               <div class="rows">
-                <div class="crow"><div class="main"><b>you@contoso.com</b><span>Purview. Token valid for 52 minutes, renews silently.</span></div><span class="pill ok">Signed in</span><button class="btn" type="button">Sign out</button></div>
-                <div class="crow"><div class="main"><b>you@fabrikam.com</b><span>Purview. Sign-in expired yesterday.</span></div><span class="pill warn">Expired</span><button class="btn" type="button">Sign in again</button></div>
+                <div class="crow"><div class="main"><b>you@contoso.com</b><span>Browser sign-in handled by martechchat. Saved on this laptop and reused until it expires.</span></div><button class="btn" type="button">Sign in again</button><button class="btn" type="button">Sign out</button></div>
               </div>
             </div>
             <div class="sect">
-              <header><h3>MCP servers</h3><button class="btn" type="button">Import from VS Code</button><button class="btn primary" type="button">Add server</button></header>
+              <header><h3>MCP servers</h3><button class="btn" type="button">Open mcp.json</button><button class="btn" type="button">Reload</button></header>
               <div class="rows">
-                <div class="crow"><div class="main"><b>azure-devops</b><span>.NET project, 14 tools, PAT from mcp.json</span></div><span class="pill ok">Running</span><input class="sw" id="s1" type="checkbox" checked aria-label="Enable azure-devops"></div>
-                <div class="crow"><div class="main"><b>purview</b><span>.NET project, 9 tools, browser sign-in as you@contoso.com</span></div><span class="pill ok">Running</span><input class="sw" id="s2" type="checkbox" checked aria-label="Enable purview"></div>
-                <div class="crow"><div class="main"><b>docs-search</b><span>HTTP, could not reach the server</span></div><span class="pill err">Failed</span><input class="sw" id="s3" type="checkbox" aria-label="Enable docs-search"></div>
+                <div class="crow"><div class="main"><b>martechchat</b><span>.NET project, Azure DevOps and Purview tools</span></div><span class="pill ok">Running</span><input class="sw" id="s1" type="checkbox" checked aria-label="Enable martechchat"></div>
+                <div class="crow"><div class="main"><b>ado-mcp</b><span>npx package, Azure DevOps tools</span></div><span class="pill warn">Starting</span><input class="sw" id="s2" type="checkbox" checked aria-label="Enable ado-mcp"></div>
               </div>
 <pre class="cfg">{
-  "azure-devops": {
-    "command": "dotnet",
-    "args": ["run", "--project", "C:/src/mcp/AdoMcp/AdoMcp.csproj"],
-    "env": { "ADO_ORG": "contoso", "ADO_PAT": "your-pat-here" }
+  "servers": {
+    "martechchat": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": ["run", "--project", "C:/…/MarTechChat.McpServer.csproj", "--no-launch-profile"],
+      "env": { "ADO_ORG_URL": "…", "ADO_PAT": "…", "PURVIEW_ACCOUNT_NAME": "…" }
+    }
   }
 }</pre>
-              <p class="small">This is your <code>mcp.json</code>, edited in place. It has the same shape as the VS Code one, so yours imports as it is, tokens included.</p>
+              <p class="small">Read straight from VS Code’s own file in <code>%APPDATA%\Code\User\mcp.json</code>. One file serves both, so a change made in either place applies to both.</p>
             </div>
           </div>
         </div>
@@ -350,7 +350,6 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
                 <div class="field"><label for="sens">Sensitivity<span>Higher wakes more easily but mis-fires more.</span></label><input id="sens" type="range" min="1" max="10" value="6"></div>
                 <div class="field"><label for="micdev">Microphone</label><select id="micdev"><option>Default: Headset (Jabra Evolve2)</option><option>Laptop microphone array</option></select></div>
                 <div class="field"><label for="stt">Speech recognition<span>Runs on this PC. Audio never leaves it.</span></label><select id="stt"><option>Balanced (about 150 MB)</option><option>Fast (about 40 MB)</option><option>Most accurate (about 500 MB)</option></select></div>
-                <div class="field"><label for="tts">Read answers aloud<span>Uses the voices built into Windows.</span></label><input class="sw" id="tts" type="checkbox" checked></div>
                 <div class="field"><label for="ptt">Push to talk shortcut<span>Works even when wake phrase is off.</span></label><input id="ptt" type="text" value="Ctrl + Alt + Space"></div>
               </div>
             </div>
@@ -369,7 +368,7 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
 
     <div class="float">
       <div class="orb"><span class="dot"><svg class="icon"><use href="#i-mic"/></svg></span><div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><div class="t"><b>Listening…</b><span>Esc to cancel</span></div></div>
-      <p class="small" style="max-width:52ch">When the main window is hidden, the wake phrase shows this small bar above your other windows. The answer is spoken and saved to History; click the bar to open the full chat.</p>
+      <p class="small" style="max-width:52ch">When the main window is hidden, the wake phrase shows this small bar above your other windows. The answer appears as text in a small panel beside it and is saved to History. Click it to open the full chat.</p>
     </div>
   </section>
 
@@ -382,9 +381,9 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
         <div class="node"><b>Browser</b><span>Only for Microsoft sign-in</span></div>
       </div>
       <div class="col mid"><h3>Hark on your PC</h3>
-        <div class="node"><b>Voice engine, offline</b><span>Wake phrase, speech to text, text to speech</span></div>
+        <div class="node"><b>Voice engine, offline</b><span>Wake phrase and speech to text</span></div>
         <div class="node"><b>Copilot SDK runtime</b><span>The same agent loop as Copilot, started with your PAT only</span></div>
-        <div class="node"><b>Your MCP servers</b><span>Started by the app with the right PAT or token</span></div>
+        <div class="node"><b>Your MCP servers</b><span>Started from the VS Code mcp.json, kept running in the tray</span></div>
         <div class="node"><b>Config and chat store</b><span>mcp.json with your tokens, chats in a local database</span></div>
       </div>
       <div class="col"><h3>Outside the PC</h3>
@@ -399,14 +398,14 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
     <h2>What each requirement needs</h2>
     <div class="tbl"><table>
       <tr><th>Requirement</th><th>How</th><th>Status</th></tr>
-      <tr><td>Runs without VS Code</td><td>The Copilot SDK ships its own Windows runtime inside the app. Nothing else to install.</td><td><span class="pill ok">Checked in SDK 1.0.30</span></td></tr>
+      <tr><td>Runs without VS Code</td><td>The Copilot SDK for .NET brings its own runtime into the app. Nothing else to install.</td><td><span class="pill ok">Checked in .NET SDK 1.0.29</span></td></tr>
       <tr><td>Only your PAT is used</td><td>Token passed explicitly, with the “use logged-in user” option off, so no other GitHub login on the PC can be picked up.</td><td><span class="pill ok">Checked</span></td></tr>
       <tr><td>Model picker</td><td>The SDK returns the models your plan allows, with each one’s cost multiplier. The app lists exactly that.</td><td><span class="pill ok">Checked</span></td></tr>
-      <tr><td>Your MCP tools</td><td>Local-process and HTTP servers, with environment variables, headers and per-tool filters. VS Code configs import directly.</td><td><span class="pill ok">Checked</span></td></tr>
+      <tr><td>Your MCP tools</td><td>Local-process and HTTP servers with environment variables. The app reads the VS Code file directly, so martechchat and ado-mcp work with no re-entry.</td><td><span class="pill ok">Checked</span></td></tr>
       <tr><td>Saved chats</td><td>Local database for the History tab. The SDK can resume a past session with its context.</td><td><span class="pill ok">Checked</span></td></tr>
       <tr><td>Custom wake phrase</td><td>sherpa-onnx keyword spotting. You type the phrase; no model training. Short phrases can mis-fire, so there is a sensitivity setting and a shortcut as backup.</td><td><span class="pill warn">Needs tuning on real mics</span></td></tr>
-      <tr><td>Speech in and out</td><td>Local speech-to-text models and the voices built into Windows. One-time model download.</td><td><span class="pill ok">Feasible</span></td></tr>
-      <tr><td>Microsoft sign-in</td><td>The same browser sign-in your Purview tool shows today. No app registration and no service principal. The login is cached encrypted on the PC and reused until it expires, including after an app restart.</td><td><span class="pill warn">Need to see the tool’s login code</span></td></tr>
+      <tr><td>Speech in, text out</td><td>Local speech-to-text model, one-time download. Answers are always text; nothing is read aloud.</td><td><span class="pill ok">Feasible</span></td></tr>
+      <tr><td>Microsoft sign-in</td><td>Your tool signs in itself, in the browser, exactly as today. No app registration and no service principal. One small step makes the login last across restarts: <code>az login</code> once, or about 15 lines in the tool.</td><td><span class="pill ok">Code reviewed</span></td></tr>
       <tr><td>Org policy</td><td>Your GitHub org must allow Copilot CLI/SDK use and fine-grained PATs with the Copilot Requests permission.</td><td><span class="pill warn">Confirm with a 1-day spike</span></td></tr>
     </table></div>
   </section>
@@ -416,9 +415,9 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
     <div class="tbl"><table>
       <tr><th>Piece</th><th>Choice</th><th>Cost</th></tr>
       <tr><td>AI</td><td>GitHub Copilot through your PAT. Usage counts against your existing Copilot allowance.</td><td class="n">Copilot only</td></tr>
-      <tr><td>Voice</td><td>sherpa-onnx (Apache 2.0) with open models, plus Windows voices. Fully offline.</td><td class="n">0</td></tr>
-      <tr><td>App shell</td><td>Electron, React, TypeScript, SQLite. All open source.</td><td class="n">0</td></tr>
-      <tr><td>Microsoft sign-in</td><td>Browser sign-in with your own account, using Microsoft’s free libraries. No app registration, no service principal.</td><td class="n">0</td></tr>
+      <tr><td>Voice</td><td>sherpa-onnx (Apache 2.0) with open models. Fully offline.</td><td class="n">0</td></tr>
+      <tr><td>App shell</td><td>Native .NET app (WPF) with SQLite. All free and open source.</td><td class="n">0</td></tr>
+      <tr><td>Microsoft sign-in</td><td>Browser sign-in with your own account, inside your existing tool. No app registration, no service principal.</td><td class="n">0</td></tr>
       <tr><td>Installer and updates</td><td>Unsigned installer shared internally, updates from GitHub Releases. A code-signing certificate would cost money, so it is left out; Windows shows a one-time warning on install.</td><td class="n">0</td></tr>
     </table></div>
     <p class="small" style="max-width:75ch">One thing to watch: Copilot moved to usage-based billing in June 2026. If your org admin has enabled paid overage, heavy use could bill beyond the plan. Ask them to keep the overage budget at zero and the app can never cost more than the seat. The app shows a usage meter either way.</p>
@@ -428,9 +427,9 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
     <h2>Build order</h2>
     <ol class="steps">
       <li><b>0. Spike, 1 to 2 days</b><span>On your PC: PAT in, list models, one prompt, one of your MCP tools called. Proves org policy and the SDK before anything else is built.</span></li>
-      <li><b>1. Chat core</b><span>App shell, tray, streaming chat, model picker, tool approval prompts, History tab.</span></li>
-      <li><b>2. Connections</b><span>PAT fields, mcp.json editor with VS Code import, Microsoft accounts with on-demand browser sign-in.</span></li>
-      <li><b>3. Voice</b><span>Wake phrase, push to talk, speech to text, spoken answers, the floating bar.</span></li>
+      <li><b>1. Chat core</b><span>.NET app shell, tray, streaming chat, model picker, tool approval prompts, History tab.</span></li>
+      <li><b>2. Connections</b><span>Copilot PAT, servers read from the VS Code mcp.json, Purview sign-in status.</span></li>
+      <li><b>3. Voice</b><span>Wake phrase, push to talk, speech to text, the floating bar.</span></li>
       <li><b>4. Ship</b><span>Installer, auto-update, first-run setup, start with Windows.</span></li>
     </ol>
   </section>
@@ -438,9 +437,9 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
   <section class="plan">
     <h2>What I need from you</h2>
     <ul class="q">
-      <li>The login code of the Purview MCP tool (the C# lines that create the credential, for example <code>InteractiveBrowserCredential</code>), so the app can reuse that exact sign-in and keep its cache between restarts.</li>
-      <li>Whether answers should be read aloud by default, or shown as text only.</li>
-      <li>Whether Electron is acceptable. It is the fastest route and matches this mock, but idles at roughly 150 to 250 MB of memory. A native .NET app would be lighter and slower to build.</li>
+      <li>Is the Azure CLI installed on the laptop? If so, running <code>az login</code> once makes Purview sign-in silent and lasting, with no code change. Your tool already checks for it before opening the browser.</li>
+      <li>If not, are you happy to add about 15 lines to <code>PurviewApiClient.cs</code> so the browser login is saved between restarts?</li>
+      <li>Which .NET SDK version is on the laptop (run <code>dotnet --version</code>)?</li>
     </ul>
   </section>
 </div>
@@ -453,7 +452,7 @@ ul.q{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-w
     tabs.forEach(function(t){t.setAttribute('aria-selected',t===b?'true':'false')});
     document.querySelectorAll('[role=tabpanel]').forEach(function(p){p.classList.toggle('on',p.id==='p-'+b.dataset.tab)});
   })});
-  var copy={idle:['Waiting for “Hey Chat”',''],listen:['Listening','What changed in the loader since Friday…'],think:['Working','Calling azure-devops…'],speak:['Speaking','Two commits landed since Friday. Tap the mic to interrupt.']};
+  var copy={idle:['Waiting for “Hey Chat”',''],listen:['Listening','What changed in the loader since Friday…'],think:['Working','Calling martechchat…'],speak:['Speaking','Two commits landed since Friday. Tap the mic to interrupt.']};
   var segs=document.querySelectorAll('.seg button');
   function setVoice(v){
     app.dataset.voice=v;
