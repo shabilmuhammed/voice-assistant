@@ -25,6 +25,11 @@
                 <TextBlock DockPanel.Dock="Top" Text="Hark" FontSize="18" FontWeight="Bold" Margin="12,4,0,14" />
 
                 <StackPanel DockPanel.Dock="Bottom" Margin="12,8,8,4">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Style="{StaticResource Icon}" FontSize="13" Text="&#xE720;" Margin="0,0,8,0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{Binding Voice.StatusText}" Style="{StaticResource Secondary}" VerticalAlignment="Center" MaxWidth="150" />
+                    </StackPanel>
                     <TextBlock Text="GitHub Copilot" FontWeight="SemiBold" FontSize="12.5" />
                     <TextBlock Text="{Binding ConnectionStatus}" Style="{StaticResource Secondary}" />
                 </StackPanel>

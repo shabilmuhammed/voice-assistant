@@ -75,12 +75,12 @@ Done:
 - Attachments: files and images by button, drag and drop, or paste.
 - Generated files: saved to a configurable folder and listed in the chat with Open and Show in folder.
 - Screen reading: whole-desktop capture attached to a message, by button or by phrase.
+- Voice: "Hey Chat" wake phrase (configurable, no training), push to talk, on-screen panel, offline speech-to-text.
+  Tested on recorded clips; not yet tested with a real microphone.
 - Windows build on GitHub Actions with tests, a zip to download and screenshots of every screen.
 
 Future:
 
-- "Hey Chat" wake phrase with an on-screen indicator. The offline engine (`src/Hark.Voice`) is written and tested
-  on recorded clips; microphone capture, the indicator, voice settings and model bundling are not started.
 - Keep MCP servers running between chats (each new chat currently restarts them).
 - Purview sign-in that survives an app restart (`az login`, or a persistent token cache in the server).
 

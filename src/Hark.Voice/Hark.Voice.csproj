@@ -11,8 +11,8 @@
     <PackageReference Include="org.k2fsa.sherpa.onnx" Version="2.0.1" />
   </ItemGroup>
 
-  <!-- Voice is a future feature. The free, offline models (about 300 MB) download into <repo>/models only when asked: -p:FetchVoiceModels=true -->
-  <Target Name="FetchVoiceModels" BeforeTargets="Build" Condition="'$(FetchVoiceModels)' == 'true' And !Exists('$(ModelsDir).complete')">
+  <!-- Downloads the free, offline voice models once into <repo>/models (about 300 MB). Skip with -p:FetchVoiceModels=false -->
+  <Target Name="FetchVoiceModels" BeforeTargets="Build" Condition="'$(FetchVoiceModels)' != 'false' And !Exists('$(ModelsDir).complete')">
     <Message Importance="high" Text="Downloading voice models into $(ModelsDir) (one time, about 300 MB)..." />
     <MakeDir Directories="$(ModelsDir)" />
     <DownloadFile SourceUrl="$(ModelsBase)/kws-models/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2" DestinationFolder="$(ModelsDir)" DestinationFileName="kws.tar.bz2" Retries="3" />

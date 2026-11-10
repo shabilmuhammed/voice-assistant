@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Threading;
 using Hark.App.ViewModels;
+using Hark.App.Voice;
 using Hark.Core;
 
 namespace Hark.App;
@@ -11,6 +12,8 @@ public partial class App : Application
     private System.Windows.Forms.NotifyIcon? _tray;
     private MainWindow? _window;
     private MainViewModel? _main;
+    private VoiceOverlay? _overlay;
+    private GlobalHotkey? _hotkeys;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -48,16 +51,30 @@ public partial class App : Application
         // "--demo" fills the screens with sample data and talks to nothing; used for automated screenshots.
         var demo = e.Args.Contains("--demo");
         _main.CaptureScreen = () => ScreenCapture.CaptureAsync(_window);
+        _overlay = new VoiceOverlay(_main.Voice);
         if (!demo) CreateTray();
         _window.Show();
         if (demo)
         {
             _main.LoadDemo(PageArg(e.Args), approvals: e.Args.Contains("--demo-approvals"));
             if (e.Args.Contains("--demo-capture")) _ = DemoCaptureAsync();
+            var voiceDemo = Array.IndexOf(e.Args, "--demo-voice");
+            if (voiceDemo >= 0 && voiceDemo + 1 < e.Args.Length) _main.Voice.LoadDemo(e.Args[voiceDemo + 1]);
         }
         else
         {
             ScreenCapture.CleanUp();
+            try
+            {
+                _hotkeys = new GlobalHotkey();
+                _hotkeys.PushToTalk += () => _main.Voice.Toggle();
+                _hotkeys.Escape += () => _main.Voice.Dismiss();
+                _main.Voice.EscapeWanted += on => _hotkeys?.ListenForEscape(on);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Keyboard shortcuts could not be set up", ex);
+            }
             _ = _main.InitializeAsync();
         }
     }
@@ -81,6 +98,14 @@ public partial class App : Application
             var menu = new System.Windows.Forms.ContextMenuStrip();
             menu.Items.Add("Open Hark", null, (_, _) => ShowWindow());
             menu.Items.Add("New chat", null, (_, _) => { ShowWindow(); _main?.Chat.NewChatCommand.Execute(null); });
+            var listen = new System.Windows.Forms.ToolStripMenuItem("Listen for the wake phrase") { CheckOnClick = true };
+            listen.Click += (_, _) =>
+            {
+                if (_main is null) return;
+                _main.Preferences.VoiceEnabled = listen.Checked;
+            };
+            menu.Opening += (_, _) => listen.Checked = _main?.Settings.VoiceEnabled == true;
+            menu.Items.Add(listen);
             menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
             menu.Items.Add("Quit", null, (_, _) => Quit());
 
@@ -137,6 +162,8 @@ public partial class App : Application
                 _tray.Dispose();
                 _tray = null;
             }
+            _hotkeys?.Dispose();
+            _overlay?.Close();
             if (_main is not null) await _main.ShutdownAsync();
         }
         catch (Exception ex)

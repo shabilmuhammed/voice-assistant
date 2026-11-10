@@ -62,6 +62,15 @@ public sealed partial class ChatViewModel : ObservableObject
         @"\b(my|the|this) screen\b|\bon[- ]screen\b|\bthis code\b|\bwhat('?s| is) (going on|happening) (here|in this)\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <summary>The answer being written, in full, each time it changes.</summary>
+    public event Action<string>? AssistantTextChanged;
+
+    /// <summary>A turn finished. The argument is the error message when it failed.</summary>
+    public event Action<string?>? TurnEnded;
+
+    /// <summary>A tool is waiting for the user's approval.</summary>
+    public event Action? AttentionNeeded;
+
     /// <summary>Raised when the view should scroll to the newest message.</summary>
     public event Action? ScrollRequested;
 
@@ -189,6 +198,7 @@ public sealed partial class ChatViewModel : ObservableObject
             Add(new ErrorVm($"Could not send the message: {ex.Message}"));
             IsBusy = false;
             Status = "";
+            TurnEnded?.Invoke($"Could not send the message: {ex.Message}");
         }
     }
 
@@ -418,12 +428,15 @@ public sealed partial class ChatViewModel : ObservableObject
         switch (evt)
         {
             case TextDelta d:
-                Streaming(d.MessageId).Text += d.Text;
+                var streaming = Streaming(d.MessageId);
+                streaming.Text += d.Text;
+                AssistantTextChanged?.Invoke(streaming.Text);
                 ScrollRequested?.Invoke();
                 break;
 
             case MessageComplete m:
                 Streaming(m.MessageId).Text = m.Content;
+                AssistantTextChanged?.Invoke(m.Content);
                 Persist("assistant", m.Content);
                 ScrollRequested?.Invoke();
                 break;
@@ -449,12 +462,14 @@ public sealed partial class ChatViewModel : ObservableObject
                 Persist("error", e.Message);
                 IsBusy = false;
                 Status = "";
+                TurnEnded?.Invoke(e.Message);
                 break;
 
             case TurnIdle:
                 IsBusy = false;
                 Status = "";
                 ReportGeneratedFiles();
+                TurnEnded?.Invoke(null);
                 _ = ReportServerProblemsAsync();
                 break;
         }
@@ -498,6 +513,7 @@ public sealed partial class ChatViewModel : ObservableObject
             Add(card);
             Status = "Waiting for your answer…";
             _main.RequestAttention();
+            AttentionNeeded?.Invoke();
             return card.Answer;
         }).Task.Unwrap();
     }

@@ -25,6 +25,8 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Markdig" Version="1.6.0" />
+    <PackageReference Include="NAudio.WinMM" Version="3.3.0" />
     <ProjectReference Include="..\Hark.Core\Hark.Core.csproj" />
+    <ProjectReference Include="..\Hark.Voice\Hark.Voice.csproj" />
   </ItemGroup>
 </Project>

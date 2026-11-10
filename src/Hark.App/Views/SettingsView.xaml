@@ -38,6 +38,53 @@
                     </StackPanel>
                 </Border>
 
+                <TextBlock Text="Voice" Style="{StaticResource SectionTitle}" Margin="0,26,0,8" />
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <CheckBox IsChecked="{Binding VoiceEnabled, Mode=TwoWay}">
+                            <StackPanel>
+                                <TextBlock Text="Listen for the wake phrase" FontWeight="SemiBold" />
+                                <TextBlock Text="The microphone is processed on this PC only. Nothing is sent until you have spoken a request, and then only the text."
+                                           Style="{StaticResource Secondary}" />
+                            </StackPanel>
+                        </CheckBox>
+
+                        <DockPanel Margin="0,16,0,0">
+                            <TextBox DockPanel.Dock="Right" Width="220" VerticalAlignment="Center"
+                                     Text="{Binding WakePhrase, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     AutomationProperties.Name="Wake phrase" />
+                            <StackPanel>
+                                <TextBlock Text="Wake phrase" FontWeight="SemiBold" />
+                                <TextBlock Text="Two plain English words work best. No training is needed." Style="{StaticResource Secondary}" />
+                            </StackPanel>
+                        </DockPanel>
+
+                        <DockPanel Margin="0,16,0,0">
+                            <Slider DockPanel.Dock="Right" Width="220" Minimum="1" Maximum="10" TickFrequency="1" IsSnapToTickEnabled="True"
+                                    VerticalAlignment="Center" Value="{Binding WakeSensitivity, Mode=TwoWay}"
+                                    AutomationProperties.Name="Wake sensitivity" />
+                            <StackPanel>
+                                <TextBlock Text="Sensitivity" FontWeight="SemiBold" />
+                                <TextBlock Text="Left is stricter: fewer accidental wake-ups, but it may miss you. Right wakes more easily."
+                                           Style="{StaticResource Secondary}" />
+                            </StackPanel>
+                        </DockPanel>
+
+                        <DockPanel Margin="0,16,0,0">
+                            <ComboBox DockPanel.Dock="Right" Width="220" ItemsSource="{Binding Microphones}" DisplayMemberPath="Name"
+                                      SelectedItem="{Binding Microphone, Mode=TwoWay}" VerticalAlignment="Center"
+                                      AutomationProperties.Name="Microphone" />
+                            <TextBlock Text="Microphone" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </DockPanel>
+
+                        <TextBlock Style="{StaticResource Secondary}" Margin="0,16,0,0"
+                                   Text="Ctrl + Alt + Space starts listening without the wake phrase. Esc cancels while Hark is listening." />
+                        <TextBlock Text="{Binding VoiceNote}" TextWrapping="Wrap" FontSize="12.5" Margin="0,8,0,0"
+                                   Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                   Visibility="{Binding VoiceNote, Converter={StaticResource TextToVisibility}}" />
+                    </StackPanel>
+                </Border>
+
                 <TextBlock Text="App" Style="{StaticResource SectionTitle}" Margin="0,26,0,8" />
                 <Border Style="{StaticResource Card}">
                     <StackPanel>

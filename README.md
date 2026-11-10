@@ -14,11 +14,11 @@ A Windows desktop app that puts GitHub Copilot and your MCP tools in one window,
 - **Generate files.** Files you ask for are saved in a folder you choose (Documents\Hark by default) and listed in the chat.
 - **Read your screen.** The screen button, or phrases like "my screen" and "this code", attach a capture of the
   whole desktop to your message.
+- **Voice.** Say "Hey Chat" (or your own phrase) while Hark is in the tray. A small panel appears above your other
+  windows, listens until you stop speaking, and shows the answer as text. Ctrl+Alt+Space does the same without the phrase.
+  Wake phrase, speech recognition and end-of-speech detection all run on this PC.
 - **History.** Every chat is saved on this PC and can be reopened and continued.
 - **Tray.** Closing the window keeps Hark running; Quit is in the tray icon's menu.
-
-Not yet: the "Hey Chat" wake phrase. The offline voice engine is in `src/Hark.Voice` with tests, but it is not
-connected to the app.
 
 ## Run it
 
@@ -26,7 +26,8 @@ connected to the app.
 Nothing else needs installing.
 
 **From Visual Studio:** open `Hark.sln`, set `Hark.App` as the startup project, press Ctrl+F5. Needs the .NET 10 SDK.
-The first build downloads the Copilot runtime (about 90 MB) from GitHub.
+The first build downloads the Copilot runtime (about 90 MB) and the voice models (about 300 MB) from GitHub.
+Add `-p:FetchVoiceModels=false` to skip the models; voice is then unavailable.
 
 ## First start
 
@@ -50,6 +51,7 @@ MCP tokens stay in `mcp.json`. Hark only reads that file.
 
 ## What leaves the PC
 
+Microphone audio never leaves the PC; only the text of what you said after the wake phrase is sent.
 Your messages, tool results and anything you attach (files, images, screen captures) go to GitHub Copilot, using your PAT.
 Your MCP servers talk to their own services (Azure DevOps, Purview) as they do in VS Code. Nothing else is sent anywhere.
 
@@ -59,7 +61,7 @@ Your MCP servers talk to their own services (Azure DevOps, Purview) as they do i
 |---|---|
 | `src/Hark.App` | The WPF app |
 | `src/Hark.Core` | Settings, chat storage, Copilot SDK wrapper, repo rules |
-| `src/Hark.Voice` | Offline wake phrase and speech-to-text (future feature) |
+| `src/Hark.Voice` | Offline wake phrase, end-of-speech detection and speech-to-text |
 | `src/Hark.Spike` | Console check: PAT, models, one prompt, MCP servers |
 | `tests/` | Unit tests |
 
@@ -70,10 +72,11 @@ dotnet test tests/Hark.Core.Tests
 ```
 
 ```bash
-dotnet test tests/Hark.Voice.Tests -p:FetchVoiceModels=true
+dotnet test tests/Hark.Voice.Tests
 ```
 
 The second command downloads about 300 MB of voice models into `models/` the first time.
+`settings.json` has a `VoiceCorrections` list for words the recognizer gets wrong (for example "per view" for "Purview").
 
 `Hark.exe --demo` opens the app with sample data and talks to nothing. The build uses it to take screenshots,
 which it publishes to the `ci-screenshots` branch.

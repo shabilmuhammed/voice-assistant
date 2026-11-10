@@ -115,6 +115,18 @@ public class VoiceTests(ITestOutputHelper output)
     public void Strips_a_leading_wake_phrase_from_the_transcript(string heard, string expected) =>
         Assert.Equal(expected, VoiceEngine.StripWakePhrase(heard, ["HEY", "CHAT"]));
 
+    [Theory]
+    [InlineData("List the per view collections.", "List the Purview collections.")]
+    [InlineData("Search Perview for customer orders", "Search Purview for customer orders")]
+    [InlineData("Open azure  dev ops", "Open Azure DevOps")]
+    [InlineData("An overview of the sprint", "An overview of the sprint")]
+    [InlineData("Supervisor review", "Supervisor review")]
+    public void Corrects_commonly_misheard_words(string heard, string expected)
+    {
+        var fixes = new Dictionary<string, string> { ["per view"] = "Purview", ["perview"] = "Purview", ["azure dev ops"] = "Azure DevOps" };
+        Assert.Equal(expected, TranscriptFixes.Apply(heard, fixes));
+    }
+
     [Fact]
     public void Stays_asleep_without_the_wake_phrase()
     {

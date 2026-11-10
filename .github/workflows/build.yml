@@ -21,12 +21,23 @@ jobs:
       - name: Test
         run: dotnet test tests/Hark.Core.Tests/Hark.Core.Tests.csproj -c Release
 
-      - name: Test voice engine (future feature; models are not bundled in the app)
-        continue-on-error: true
-        run: dotnet test tests/Hark.Voice.Tests/Hark.Voice.Tests.csproj -c Release -p:FetchVoiceModels=true
+      - name: Test voice engine (downloads the offline voice models once, about 300 MB)
+        run: dotnet test tests/Hark.Voice.Tests/Hark.Voice.Tests.csproj -c Release
 
       - name: Publish app (self-contained, no .NET install needed on the laptop)
         run: dotnet publish src/Hark.App/Hark.App.csproj -c Release -r win-x64 --self-contained true -o out/hark
+
+      - name: Add the voice models to the app folder
+        shell: pwsh
+        run: |
+          $kws = "sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01"
+          $stt = "sherpa-onnx-moonshine-base-en-int8"
+          New-Item -ItemType Directory -Force "out/hark/models/$kws", "out/hark/models/$stt" | Out-Null
+          Copy-Item "models/$kws/encoder-epoch-12-avg-2-chunk-16-left-64.onnx", "models/$kws/decoder-epoch-12-avg-2-chunk-16-left-64.onnx", "models/$kws/joiner-epoch-12-avg-2-chunk-16-left-64.onnx", "models/$kws/tokens.txt", "models/$kws/bpe.model" "out/hark/models/$kws"
+          Copy-Item "models/$stt/preprocess.onnx", "models/$stt/encode.int8.onnx", "models/$stt/uncached_decode.int8.onnx", "models/$stt/cached_decode.int8.onnx", "models/$stt/tokens.txt" "out/hark/models/$stt"
+          Copy-Item "models/silero_vad.onnx" "out/hark/models"
+          "{0:N0} MB of voice models" -f ((Get-ChildItem out/hark/models -Recurse | Measure-Object Length -Sum).Sum / 1MB)
+          if (-not (Get-ChildItem out/hark -Filter "sherpa-onnx*.dll" -Recurse)) { throw "The voice engine's native library is missing from the published app." }
 
       - name: Check the Copilot runtime is in the app folder
         shell: pwsh
@@ -62,6 +73,9 @@ jobs:
           Shot "chat-capture" 0 $false "--demo-capture"
           Shot "chat-approvals" 0 $false "--demo-approvals"
           Shot "chat-approvals-dark" 0 $true "--demo-approvals"
+          Shot "voice-listening" 1 $false @("--demo-voice","listening")
+          Shot "voice-working" 1 $false @("--demo-voice","working")
+          Shot "voice-answer" 1 $true @("--demo-voice","answer")
           Shot "history-light" 1 $false
           Shot "connections-light" 2 $false
           Shot "settings-light" 3 $false

@@ -22,6 +22,7 @@ public sealed partial class MainViewModel : ObservableObject
         Chat = new ChatViewModel(this);
         History = new HistoryViewModel(this);
         Connections = new ConnectionsViewModel(this);
+        Voice = new VoiceViewModel(this);
         Preferences = new SettingsViewModel(this);
         _currentPage = Chat;
     }
@@ -34,6 +35,7 @@ public sealed partial class MainViewModel : ObservableObject
     public HistoryViewModel History { get; }
     public ConnectionsViewModel Connections { get; }
     public SettingsViewModel Preferences { get; }
+    public VoiceViewModel Voice { get; }
 
     private bool _demo;
 
@@ -76,6 +78,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
+        Voice.ApplySettings();
         Connections.Reload();
         if (string.IsNullOrWhiteSpace(Settings.GitHubPat))
         {
@@ -145,6 +148,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public async Task ShutdownAsync()
     {
+        Voice.Shutdown();
         await Chat.CloseSessionAsync();
         await Copilot.DisposeAsync();
     }
