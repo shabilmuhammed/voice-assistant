@@ -53,7 +53,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _loading = true;
         Models.Clear();
         foreach (var m in _main.Chat.Models) Models.Add(m);
-        DefaultModel = Models.FirstOrDefault(m => m.Id == _main.Settings.DefaultModel);
+        DefaultModel = Models.FirstOrDefault(m => m.Id == _main.Settings.DefaultModel) ?? Models.FirstOrDefault();
         _loading = false;
     }
 
