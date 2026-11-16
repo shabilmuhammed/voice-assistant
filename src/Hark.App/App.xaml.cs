@@ -57,6 +57,12 @@ public partial class App : Application
         // "--demo" fills the screens with sample data and talks to nothing; used for automated screenshots.
         var demo = e.Args.Contains("--demo");
         _demoMode = demo;
+        if (demo)
+        {
+            // The build machine's screen is 1024 x 768; keep the whole window on it.
+            _window.Width = 1000;
+            _window.Height = 700;
+        }
         _main.CaptureScreen = () => ScreenCapture.CaptureAsync(_window);
         _overlay = new VoiceOverlay(_main.Voice);
         if (!demo) CreateTray();
@@ -117,10 +123,22 @@ public partial class App : Application
         _darkApplied = dark;
         try
         {
-            Resources.MergedDictionaries[0] = new ResourceDictionary
+            // Find our palette by name. Its position is not fixed: the Windows theme adds its own dictionaries too.
+            var palette = new ResourceDictionary
             {
-                Source = new Uri(dark ? "Theme/Dark.xaml" : "Theme/Light.xaml", UriKind.Relative),
+                Source = new Uri(dark ? "pack://application:,,,/Theme/Dark.xaml" : "pack://application:,,,/Theme/Light.xaml"),
             };
+            var merged = Resources.MergedDictionaries;
+            var index = -1;
+            for (var i = 0; i < merged.Count; i++)
+            {
+                var source = merged[i].Source?.OriginalString ?? "";
+                if (source.EndsWith("Theme/Light.xaml", StringComparison.OrdinalIgnoreCase) ||
+                    source.EndsWith("Theme/Dark.xaml", StringComparison.OrdinalIgnoreCase)) index = i;
+            }
+            if (index >= 0) merged[index] = palette;
+            else merged.Add(palette);
+            Log.Info($"Palette: {(dark ? "dark" : "light")}.");
         }
         catch (Exception ex)
         {
