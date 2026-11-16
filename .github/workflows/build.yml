@@ -87,6 +87,23 @@ jobs:
           Shot "connections-dark" 2 $true
           Get-ChildItem shots
 
+      - name: Press every button on every screen
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:LOCALAPPDATA "Hark\hark.log"
+          if (Test-Path $log) { Remove-Item $log }
+          foreach ($theme in 1, 0) {
+            Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name AppsUseLightTheme -Value $theme -Type DWord
+            $p = Start-Process -FilePath "out/hark/Hark.exe" -ArgumentList "--demo","--selftest" -PassThru
+            if (-not $p.WaitForExit(90000)) { Stop-Process -Id $p.Id -Force; throw "The self-test did not finish." }
+            $p = Start-Process -FilePath "out/hark/Hark.exe" -ArgumentList "--demo","--demo-approvals","--selftest" -PassThru
+            if (-not $p.WaitForExit(90000)) { Stop-Process -Id $p.Id -Force; throw "The self-test did not finish." }
+          }
+          Get-Content $log
+          $text = Get-Content $log -Raw
+          if ($text -notmatch "SELFTEST DONE") { throw "The self-test did not report completion." }
+          if ($text -match "ERROR") { throw "The app logged an error while its buttons were pressed. See the log above." }
+
       - name: Show the app log from the screenshot runs
         if: always()
         shell: pwsh

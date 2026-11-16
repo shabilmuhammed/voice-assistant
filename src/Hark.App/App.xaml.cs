@@ -76,6 +76,7 @@ public partial class App : Application
                 _main.Chat.Title = "New chat";
             }
             if (e.Args.Contains("--demo-capture")) _ = DemoCaptureAsync();
+            if (e.Args.Contains("--selftest")) _ = SelfTestAsync();
             var voiceDemo = Array.IndexOf(e.Args, "--demo-voice");
             if (voiceDemo >= 0 && voiceDemo + 1 < e.Args.Length) _main.Voice.LoadDemo(e.Args[voiceDemo + 1]);
         }
@@ -94,6 +95,73 @@ public partial class App : Application
                 Log.Error("Keyboard shortcuts could not be set up", ex);
             }
             _ = _main.InitializeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Build-time check: visits every page and presses every button (mouse down only, so nothing is actually run),
+    /// which exercises hover, press and focus animations. Any error lands in the log, which the build then reads.
+    /// </summary>
+    private async Task SelfTestAsync()
+    {
+        var pressed = 0;
+        try
+        {
+            if (_window is null || _main is null) return;
+            await Task.Delay(1500);
+            for (var page = 0; page < 4; page++)
+            {
+                _main.SelectedNavIndex = page;
+                await Task.Delay(700);
+                foreach (var button in Descendants<System.Windows.Controls.Primitives.ButtonBase>(_window))
+                {
+                    if (!button.IsVisible || !button.IsEnabled) continue;
+                    button.RaiseEvent(new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0) { RoutedEvent = UIElement.MouseEnterEvent });
+                    button.RaiseEvent(new System.Windows.Input.MouseButtonEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0, System.Windows.Input.MouseButton.Left)
+                        { RoutedEvent = UIElement.MouseLeftButtonDownEvent });
+                    await Task.Delay(30);
+                    button.ReleaseMouseCapture();
+                    button.RaiseEvent(new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0) { RoutedEvent = UIElement.MouseLeaveEvent });
+                    pressed++;
+                }
+                foreach (var box in Descendants<System.Windows.Controls.CheckBox>(_window))
+                {
+                    if (!box.IsVisible) continue;
+                    box.IsChecked = box.IsChecked != true;
+                    await Task.Delay(30);
+                    box.IsChecked = box.IsChecked != true;
+                }
+            }
+            // The chat with approvals, and an empty chat, have controls the first pass did not show.
+            _main.SelectedNavIndex = 0;
+            _main.Chat.Messages.Clear();
+            await Task.Delay(700);
+            foreach (var mode in new[] { "listening", "working", "answer" })
+            {
+                _main.Voice.LoadDemo(mode);
+                await Task.Delay(500);
+            }
+            await Task.Delay(500);
+            Log.Info($"SELFTEST DONE: pressed {pressed} buttons.");
+        }
+        catch (Exception ex)
+        {
+            Log.Error("SELFTEST FAILED", ex);
+        }
+        finally
+        {
+            Shutdown();
+        }
+    }
+
+    private static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
+    {
+        var count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(root);
+        for (var i = 0; i < count; i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+            if (child is T match) yield return match;
+            foreach (var deeper in Descendants<T>(child)) yield return deeper;
         }
     }
 
