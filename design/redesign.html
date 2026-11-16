@@ -1,0 +1,600 @@
+<title>Hark Redesign Proposal</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the proposed app, working, leads the page. Decisions and build notes follow in one capped column. */
+:root{
+  --canvas:#f4f6f9; --surface:#ffffff; --raised:#ffffff; --sunken:#edf0f4; --line:#dfe5ec;
+  --ink:#0e1726; --ink-2:#56647a; --ink-3:#6f7d92;
+  --signal:#0a78a3; --signal-deep:#075b7d; --signal-soft:#e1f1f8; --on-signal:#ffffff;
+  --user:#e9eef5; --ok:#17794a; --ok-soft:#dff3e7; --warn:#8a5300; --warn-soft:#fbecd2; --err:#b3261e; --err-soft:#fbe3e1;
+  --shadow-1:0 1px 2px rgba(14,23,38,.06),0 4px 14px -6px rgba(14,23,38,.14);
+  --shadow-2:0 2px 6px rgba(14,23,38,.06),0 22px 44px -18px rgba(14,23,38,.30);
+  --ui:"Geist","Segoe UI Variable","Segoe UI",system-ui,sans-serif;
+  --mono:"Geist Mono","Cascadia Code",Consolas,monospace;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --canvas:#0b1017; --surface:#121922; --raised:#18212c; --sunken:#0e141c; --line:#232e3b;
+  --ink:#e8eef5; --ink-2:#9aa8b9; --ink-3:#8492a5;
+  --signal:#52c2ee; --signal-deep:#8ad7f5; --signal-soft:#12303f; --on-signal:#04202c;
+  --user:#1c2734; --ok:#5fd08d; --ok-soft:#133223; --warn:#f0b455; --warn-soft:#38290c; --err:#ff8a80; --err-soft:#3f1819;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4),0 4px 14px -6px rgba(0,0,0,.6);
+  --shadow-2:0 2px 6px rgba(0,0,0,.4),0 22px 44px -18px rgba(0,0,0,.8); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --canvas:#0b1017; --surface:#121922; --raised:#18212c; --sunken:#0e141c; --line:#232e3b;
+  --ink:#e8eef5; --ink-2:#9aa8b9; --ink-3:#8492a5;
+  --signal:#52c2ee; --signal-deep:#8ad7f5; --signal-soft:#12303f; --on-signal:#04202c;
+  --user:#1c2734; --ok:#5fd08d; --ok-soft:#133223; --warn:#f0b455; --warn-soft:#38290c; --err:#ff8a80; --err-soft:#3f1819;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4),0 4px 14px -6px rgba(0,0,0,.6);
+  --shadow-2:0 2px 6px rgba(0,0,0,.4),0 22px 44px -18px rgba(0,0,0,.8); color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{overflow-x:clip}
+body{background:var(--canvas);color:var(--ink);font:400 15px/1.55 var(--ui);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:36px 80px}
+::selection{background:var(--signal);color:var(--on-signal)}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+h1,h2,h3,p{margin:0}
+h1{font:600 clamp(28px,4.2vw,40px)/1.1 var(--ui);letter-spacing:-.025em;text-wrap:balance;max-width:20ch}
+h2{font:600 22px/1.2 var(--ui);letter-spacing:-.015em}
+h3{font:600 15px/1.3 var(--ui)}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1140px;margin:0 auto;display:flex;flex-direction:column;gap:64px}
+.lede{color:var(--ink-2);font-size:16.5px;max-width:60ch;margin-top:14px}
+.small{font-size:13px;color:var(--ink-2)}
+.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- stage controls ---------- */
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink-2);transition:background-color .15s,color .15s,border-color .15s}
+.chip:hover{color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--canvas)}
+.controls .gap{flex:1}
+
+/* ---------- the app ---------- */
+.app{position:relative;height:720px;border-radius:14px;overflow:hidden;background:var(--canvas);border:1px solid var(--line);box-shadow:var(--shadow-2);display:grid;grid-template-columns:268px minmax(0,1fr)}
+.side{background:var(--sunken);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.brand{display:flex;align-items:center;gap:10px;padding:16px 16px 10px}
+.mark{width:26px;height:26px;border-radius:8px;background:var(--signal);display:grid;place-items:center;flex:none}
+.mark i{display:block;width:2.5px;border-radius:2px;background:var(--on-signal)}
+.mark div{display:flex;gap:2.5px;align-items:center;height:14px}
+.brand b{font-weight:600;letter-spacing:-.01em;font-size:15.5px}
+.newchat{margin:6px 12px 10px;display:flex;align-items:center;gap:10px;justify-content:center;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 12px;font-weight:500;cursor:pointer;box-shadow:var(--shadow-1);transition:transform .18s var(--ease)}
+.newchat:active{transform:scale(.98)}
+.nav{position:relative;padding:4px 8px;display:flex;flex-direction:column;gap:2px}
+.nav .pill{position:absolute;left:8px;right:8px;height:36px;border-radius:9px;background:var(--surface);box-shadow:var(--shadow-1);transition:transform .32s var(--ease);pointer-events:none}
+.nav button{position:relative;display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border:0;background:transparent;border-radius:9px;cursor:pointer;color:var(--ink-2);font-weight:500;text-align:left;transition:color .15s}
+.nav button[aria-current="true"]{color:var(--ink)}
+.nav button:hover{color:var(--ink)}
+.recent{flex:1;min-height:0;overflow:auto;padding:14px 8px 8px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.recent h4{margin:0;padding:6px 10px;font:500 12px/1 var(--ui);color:var(--ink-3)}
+.recent button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:7px 10px;border-radius:8px;cursor:pointer;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px;transition:background-color .15s,color .15s}
+.recent button:hover{background:var(--surface);color:var(--ink)}
+.recent button.on{color:var(--ink);font-weight:500}
+.status{border-top:1px solid var(--line);padding:10px 14px 12px;display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:var(--ink-2)}
+.status div{display:flex;align-items:center;gap:8px;min-width:0}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
+.dot.live{background:var(--signal);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+.main{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--canvas)}
+.top{display:flex;align-items:center;gap:12px;padding:12px 18px;min-height:54px}
+.top h3{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14.5px}
+.icon-btn{width:34px;height:34px;border-radius:9px;border:0;background:transparent;display:grid;place-items:center;cursor:pointer;color:var(--ink-2);transition:background-color .15s,color .15s}
+.icon-btn:hover{background:var(--sunken);color:var(--ink)}
+.win{display:flex;gap:2px;color:var(--ink-3)}
+.win span{width:36px;height:30px;display:grid;place-items:center}
+.win svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:1.2}
+
+.page{position:absolute;inset:54px 0 0 0;display:none;flex-direction:column;min-height:0}
+.page.on{display:flex;animation:pagein .34s var(--ease)}
+@keyframes pagein{from{opacity:0;transform:translateY(10px)}}
+
+/* chat */
+.thread{flex:1;min-height:0;overflow:auto;padding:8px 24px 150px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.col{max-width:740px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.me{align-self:flex-end;max-width:78%;background:var(--user);border-radius:18px 18px 6px 18px;padding:10px 15px;animation:rise .36s var(--ease)}
+.me .att{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.file{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:4px 9px;font-size:12.5px;color:var(--ink-2)}
+.file .i{width:14px;height:14px}
+.ai{display:flex;flex-direction:column;gap:10px;animation:rise .36s var(--ease);min-width:0}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+.who{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-3)}
+.who .mark{width:20px;height:20px;border-radius:6px}
+.who .mark div{height:10px;gap:2px}.who .mark i{width:2px}
+.act{border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.act summary{list-style:none;display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;font-size:13.5px;color:var(--ink-2)}
+.act summary::-webkit-details-marker{display:none}
+.act summary b{color:var(--ink);font-weight:500}
+.act summary .chev{margin-left:auto;transition:transform .25s var(--ease)}
+.act[open] summary .chev{transform:rotate(180deg)}
+.act ol{margin:0;padding:2px 12px 12px 14px;list-style:none;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.act li{display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13px}
+.act li code{font-family:var(--mono);font-size:12.5px}
+.act li span:last-child{color:var(--ink-3);font-variant-numeric:tabular-nums}
+.tick{width:16px;height:16px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center}
+.tick svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--signal);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.prose{max-width:68ch}
+.prose p+p,.prose p+.tbl,.prose .tbl+p,.prose p+.code,.prose .code+p{margin-top:12px}
+.prose code{font-family:var(--mono);font-size:.88em;background:var(--sunken);border-radius:5px;padding:1px 5px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.tbl table{border-collapse:collapse;width:100%;font-size:13.5px}
+.tbl th{text-align:left;font-weight:500;color:var(--ink-2);padding:8px 12px;border-bottom:1px solid var(--line);background:var(--sunken)}
+.tbl td{padding:8px 12px;border-bottom:1px solid var(--line)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td:first-child{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.tag{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:500}
+.tag.bug{background:var(--err-soft);color:var(--err)} .tag.task{background:var(--signal-soft);color:var(--signal-deep)}
+.code{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.code header{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 6px 12px;background:var(--sunken);font-size:12.5px;color:var(--ink-2)}
+.code pre{margin:0;padding:12px 14px;font:400 12.8px/1.6 var(--mono);overflow-x:auto}
+.ghost{border:0;background:transparent;border-radius:7px;padding:4px 9px;font-size:12.5px;color:var(--ink-2);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.ghost:hover{background:var(--line);color:var(--ink)}
+.tools{display:flex;gap:2px;opacity:0;transition:opacity .2s}
+.ai:hover .tools,.ai:focus-within .tools{opacity:1}
+.saved{display:flex;flex-wrap:wrap;gap:8px}
+.tile{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 12px;cursor:pointer;transition:transform .2s var(--ease),box-shadow .2s}
+.tile:hover{transform:translateY(-1px);box-shadow:var(--shadow-1)}
+.tile b{font-weight:500;font-size:13.5px;display:block}.tile span{font-size:12px;color:var(--ink-3)}
+.tile .ext{width:30px;height:30px;border-radius:7px;background:var(--signal-soft);color:var(--signal-deep);display:grid;place-items:center;font:500 10.5px var(--mono)}
+.caret{display:inline-block;width:7px;height:1.05em;vertical-align:-.18em;margin-left:2px;border-radius:2px;background:var(--signal);animation:pulse 1s ease-in-out infinite}
+.approve{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow-1)}
+.approve pre{margin:0;font:400 12.5px/1.5 var(--mono);color:var(--ink-2);background:var(--sunken);border-radius:8px;padding:9px 11px;overflow-x:auto}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:7px 14px;font-weight:500;font-size:13.5px;cursor:pointer;transition:transform .15s var(--ease),background-color .15s}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--signal);border-color:var(--signal);color:var(--on-signal)}
+
+/* composer */
+.dock{position:absolute;left:0;right:0;bottom:0;padding:0 24px 18px;background:linear-gradient(to top,var(--canvas) 62%,transparent);pointer-events:none}
+.composer{pointer-events:auto;max-width:740px;margin:0 auto;background:var(--raised);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-2);padding:10px 10px 8px 14px;transition:border-color .2s,box-shadow .25s}
+.composer:focus-within{border-color:var(--signal)}
+.pending{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.pending .file button{border:0;background:transparent;padding:0 0 0 2px;cursor:pointer;color:var(--ink-3);display:grid}
+.composer textarea{display:block;width:100%;border:0;outline:0;resize:none;background:transparent;font-size:15px;line-height:1.5;min-height:26px;max-height:140px;padding:4px 0}
+.composer textarea::placeholder{color:var(--ink-3)}
+.bar{display:flex;align-items:center;gap:4px;margin-top:6px}
+.model{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;border-radius:8px;padding:5px 8px;font-size:13px;color:var(--ink-2);cursor:pointer}
+.model:hover{background:var(--sunken);color:var(--ink)}
+.bar .gap{flex:1}
+.send{width:36px;height:36px;border-radius:50%;border:0;background:var(--signal);color:var(--on-signal);display:grid;place-items:center;cursor:pointer;transition:transform .2s var(--ease),border-radius .3s var(--ease)}
+.send:active{transform:scale(.92)}
+.send .stop{display:none;width:11px;height:11px;border-radius:2.5px;background:currentColor}
+.app[data-busy="1"] .send .i{display:none}.app[data-busy="1"] .send .stop{display:block}
+.app[data-busy="1"] .send{border-radius:12px}
+
+/* empty state */
+.hello{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px 24px 170px;text-align:center}
+.hello h2{font-size:28px;letter-spacing:-.02em}
+.sugg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:620px;width:100%}
+.sugg button{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:2px;transition:transform .22s var(--ease),box-shadow .22s;animation:rise .5s var(--ease) backwards}
+.sugg button:nth-child(2){animation-delay:.05s}.sugg button:nth-child(3){animation-delay:.1s}.sugg button:nth-child(4){animation-delay:.15s}
+.sugg button:hover{transform:translateY(-2px);box-shadow:var(--shadow-1)}
+.sugg b{font-weight:500}.sugg span{font-size:13px;color:var(--ink-2)}
+
+/* orb: three soft discs drifting inside a clipped circle */
+.orb{position:relative;width:64px;height:64px;border-radius:50%;overflow:hidden;background:var(--signal-deep);flex:none;box-shadow:0 0 0 6px color-mix(in srgb,var(--signal) 14%,transparent)}
+.orb i{position:absolute;border-radius:50%;filter:blur(9px);opacity:.9}
+.orb i:nth-child(1){width:70%;height:70%;left:-10%;top:-5%;background:#7fe0ff;animation:drift1 6s ease-in-out infinite}
+.orb i:nth-child(2){width:65%;height:65%;right:-12%;top:20%;background:#1aa0d8;animation:drift2 7s ease-in-out infinite}
+.orb i:nth-child(3){width:60%;height:60%;left:15%;bottom:-18%;background:#d7f6ff;animation:drift3 8s ease-in-out infinite}
+@keyframes drift1{50%{transform:translate(26%,22%) scale(1.15)}}
+@keyframes drift2{50%{transform:translate(-30%,-12%) scale(.9)}}
+@keyframes drift3{50%{transform:translate(8%,-34%) scale(1.2)}}
+.orb.sm{width:40px;height:40px;box-shadow:none}
+.orb.loud i{animation-duration:1.6s}
+
+/* settings + connections */
+.sheet{flex:1;min-height:0;overflow:auto;padding:4px 24px 40px}
+.sheet .col{gap:26px;max-width:720px}
+.group{display:flex;flex-direction:column;gap:8px}
+.group>h3{font-size:13px;font-weight:500;color:var(--ink-2);padding-left:4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.set{display:flex;align-items:center;gap:16px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.set:last-child{border-bottom:0}
+.set>div:first-child{flex:1;min-width:0}
+.set b{font-weight:500;display:block}.set span{font-size:13px;color:var(--ink-2)}
+.seg{display:inline-flex;background:var(--sunken);border-radius:9px;padding:3px;position:relative}
+.seg button{border:0;background:transparent;border-radius:7px;padding:5px 11px;font-size:13px;font-weight:500;color:var(--ink-2);cursor:pointer;transition:background-color .2s,color .2s,box-shadow .2s}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow-1)}
+.sw{appearance:none;width:40px;height:23px;border-radius:23px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background-color .25s}
+.sw::after{content:"";position:absolute;top:2.5px;left:2.5px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .3s var(--ease)}
+.sw:checked{background:var(--signal)}.sw:checked::after{transform:translateX(17px)}
+.field{border:1px solid var(--line);background:var(--canvas);border-radius:9px;padding:7px 10px;font-size:13.5px;width:200px;max-width:100%}
+.meter{height:6px;border-radius:6px;background:var(--sunken);overflow:hidden;width:200px}
+.meter i{display:block;height:100%;width:40%;border-radius:6px;background:var(--signal);animation:lvl 1.8s ease-in-out infinite}
+@keyframes lvl{0%,100%{width:18%}35%{width:70%}60%{width:42%}}
+.srv{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.srv:last-child{border-bottom:0}.srv>div{flex:1;min-width:0}
+.srv b{font-weight:500;display:block}.srv span{font-size:13px;color:var(--ink-2)}
+.badge{font-size:12px;font-weight:500;border-radius:999px;padding:2px 10px}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}.badge.warn{background:var(--warn-soft);color:var(--warn)}
+
+/* voice overlay */
+.voice{position:absolute;left:50%;bottom:22px;width:min(520px,calc(100% - 32px));transform:translate(-50%,24px) scale(.96);opacity:0;pointer-events:none;background:#141b24;color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:26px;box-shadow:0 24px 60px -18px rgba(0,0,0,.6);padding:14px 18px;display:flex;gap:14px;align-items:flex-start;transition:transform .5s var(--ease),opacity .3s,border-radius .4s var(--ease)}
+.voice.on{transform:translate(-50%,0) scale(1);opacity:1;pointer-events:auto}
+.voice .t{flex:1;min-width:0;padding-top:2px}
+.voice b{display:block;font-weight:600;font-size:15.5px}
+.voice .sub{color:rgba(255,255,255,.72);font-size:13.5px}
+.voice .ans{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s var(--ease)}
+.voice .ans>div{overflow:hidden;font-size:14px;line-height:1.55}
+.voice.answer .ans{grid-template-rows:1fr}
+.voice.answer .ans>div{padding-top:10px}
+.voice ul{margin:6px 0 0;padding-left:18px}
+.dim{position:absolute;inset:0;background:rgba(8,12,18,.28);opacity:0;pointer-events:none;transition:opacity .35s}
+.dim.on{opacity:1}
+
+/* ---------- write-up ---------- */
+section.notes{display:flex;flex-direction:column;gap:18px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.note h3{margin-bottom:8px}
+.note ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;color:var(--ink-2)}
+.note li b{color:var(--ink);font-weight:500}
+.sw-row{display:flex;flex-wrap:wrap;gap:10px}
+.swatch{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2)}
+.swatch i{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);flex:none}
+.motion{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.motion div{display:grid;grid-template-columns:190px minmax(0,1fr) auto;gap:6px 16px;padding:11px 16px;border-bottom:1px solid var(--line)}
+.motion div:last-child{border-bottom:0}
+.motion b{font-weight:500}.motion span{color:var(--ink-2)}.motion em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--ink-3);white-space:nowrap}
+
+@media (max-width:820px){
+  .app{grid-template-columns:minmax(0,1fr);height:700px}
+  .side{display:none}
+  .two{grid-template-columns:minmax(0,1fr)}
+  .sugg{grid-template-columns:minmax(0,1fr)}
+  .motion div{grid-template-columns:minmax(0,1fr)}
+  .set{flex-wrap:wrap}
+  .win{display:none}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="s-chat" viewBox="0 0 24 24"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-5 4v-4H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></symbol>
+  <symbol id="s-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="s-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6.5 8h11v3.5a5.5 5.5 0 0 1-11 0zM12 17v4"/></symbol>
+  <symbol id="s-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></symbol>
+  <symbol id="s-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="s-clip" viewBox="0 0 24 24"><path d="M20 11.5l-8.2 8.2a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.4 8.4a1.7 1.7 0 0 1-2.4-2.4l7.7-7.7"/></symbol>
+  <symbol id="s-screen" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="1.5"/><path d="M8.5 20h7M12 16.5V20"/></symbol>
+  <symbol id="s-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></symbol>
+  <symbol id="s-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="s-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="s-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></symbol>
+  <symbol id="s-redo" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 13.7-5.7L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.7 5.7L4 15.5M4 20v-4.5h4.5"/></symbol>
+  <symbol id="s-doc" viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 7 20zM14 3.5v4h4"/></symbol>
+  <symbol id="s-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="s-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header>
+    <h1>Hark, redesigned around the conversation</h1>
+    <p class="lede">A proposal for your approval. Nothing here is built yet. The app below is a working mock: click through the pages, replay an answer, and preview the voice panel. Every feature in the current app keeps its place; what changes is how it looks, moves and is laid out.</p>
+  </header>
+
+  <section>
+    <div class="controls">
+      <button class="chip" type="button" data-go="chat" aria-pressed="true">Chat</button>
+      <button class="chip" type="button" data-go="new" aria-pressed="false">New chat</button>
+      <button class="chip" type="button" data-go="conn" aria-pressed="false">Connections</button>
+      <button class="chip" type="button" data-go="settings" aria-pressed="false">Settings</button>
+      <span class="gap"></span>
+      <button class="chip" type="button" id="replay">Replay the answer</button>
+      <button class="chip" type="button" id="voicebtn">Preview “Hey Chat”</button>
+    </div>
+
+    <div class="app" id="app" data-busy="0">
+      <aside class="side">
+        <div class="brand"><span class="mark"><div><i style="height:5px"></i><i style="height:10px"></i><i style="height:14px"></i><i style="height:10px"></i><i style="height:5px"></i></div></span><b>Hark</b></div>
+        <button class="newchat" type="button" data-go="new"><svg class="i"><use href="#s-plus"/></svg>New chat</button>
+        <nav class="nav" aria-label="Sections">
+          <span class="pill" id="pill"></span>
+          <button type="button" data-go="chat" aria-current="true"><svg class="i"><use href="#s-chat"/></svg>Chat</button>
+          <button type="button" data-go="history"><svg class="i"><use href="#s-clock"/></svg>History</button>
+          <button type="button" data-go="conn"><svg class="i"><use href="#s-plug"/></svg>Connections</button>
+          <button type="button" data-go="settings"><svg class="i"><use href="#s-gear"/></svg>Settings</button>
+        </nav>
+        <div class="recent">
+          <h4>Today</h4>
+          <button type="button" class="on" data-go="chat">Ingestion pipeline: sprint status</button>
+          <button type="button" data-go="chat">Lineage for customer_orders</button>
+          <h4>Yesterday</h4>
+          <button type="button" data-go="chat">Retry logic for the blob trigger</button>
+          <button type="button" data-go="chat">Bugs from the standup notes</button>
+          <h4>Earlier</h4>
+          <button type="button" data-go="chat">Sensitivity labels on the finance lake</button>
+        </div>
+        <div class="status">
+          <div><span class="dot"></span>Copilot connected</div>
+          <div><span class="dot"></span>4 tool servers ready</div>
+          <div><span class="dot live"></span>Listening for “Hey Chat”</div>
+        </div>
+      </aside>
+
+      <div class="main">
+        <div class="top">
+          <h3 id="title">Ingestion pipeline: sprint status</h3>
+          <button class="icon-btn" type="button" aria-label="Search chats"><svg class="i"><use href="#s-search"/></svg></button>
+          <div class="win" aria-hidden="true">
+            <span><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></span>
+            <span><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg></span>
+            <span><svg viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg></span>
+          </div>
+        </div>
+
+        <!-- CHAT -->
+        <div class="page on" id="p-chat">
+          <div class="thread" id="thread"><div class="col">
+            <div class="me">What is still open on the ingestion pipeline repo this sprint?</div>
+            <div class="ai" id="ai1">
+              <div class="who"><span class="mark"><div><i style="height:4px"></i><i style="height:8px"></i><i style="height:10px"></i><i style="height:8px"></i><i style="height:4px"></i></div></span>Hark, with Claude Sonnet 5.5</div>
+              <details class="act" id="act">
+                <summary><span class="tick" id="actdot"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.4 2.4 4.6-5"/></svg></span><span id="acttext">Used <b>2 tools</b> in 1.9 s</span><svg class="i chev" style="width:15px;height:15px"><use href="#s-down"/></svg></summary>
+                <ol>
+                  <li><span class="tick"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.4 2.4 4.6-5"/></svg></span><span>martechchat <code>search_work_items</code></span><span>1.2 s</span></li>
+                  <li><span class="tick"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.4 2.4 4.6-5"/></svg></span><span>martechchat <code>get_work_item</code></span><span>0.7 s</span></li>
+                </ol>
+              </details>
+              <div class="prose" id="prose">
+                <p>Three items are still open in <b>Sprint 42</b>:</p>
+                <div class="tbl"><table>
+                  <tr><th>Id</th><th>Title</th><th>Type</th></tr>
+                  <tr><td>#4812</td><td>Null schema crashes the bronze loader</td><td><span class="tag bug">Bug</span></td></tr>
+                  <tr><td>#4790</td><td>Add retry policy to the blob trigger</td><td><span class="tag task">Task</span></td></tr>
+                  <tr><td>#4755</td><td>Backfill job for March partitions</td><td><span class="tag task">Task</span></td></tr>
+                </table></div>
+                <p>The bug is the urgent one. The loader fails in <code>load_bronze()</code> when the schema is missing:</p>
+                <div class="code"><header><span>python</span><button class="ghost" type="button"><svg class="i" style="width:14px;height:14px"><use href="#s-copy"/></svg>Copy</button></header><pre>def load_bronze(frame):
+    schema = frame.schema  # None for empty files
+    return write(frame, schema.names)</pre></div>
+              </div>
+              <div class="tools"><button class="ghost" type="button"><svg class="i" style="width:14px;height:14px"><use href="#s-copy"/></svg>Copy</button><button class="ghost" type="button"><svg class="i" style="width:14px;height:14px"><use href="#s-redo"/></svg>Try again</button></div>
+            </div>
+
+            <div class="me"><div class="att"><span class="file"><svg class="i"><use href="#s-doc"/></svg>loader.py</span></div>Export those three as a CSV and suggest a fix for the loader.</div>
+            <div class="ai">
+              <div class="who"><span class="mark"><div><i style="height:4px"></i><i style="height:8px"></i><i style="height:10px"></i><i style="height:8px"></i><i style="height:4px"></i></div></span>Hark</div>
+              <div class="prose"><p>Done. The CSV has the three items, and the review explains a two-line guard for empty files.</p></div>
+              <div class="saved">
+                <div class="tile" tabindex="0"><span class="ext">csv</span><div><b>sprint-42-open-items.csv</b><span>Documents\Hark</span></div></div>
+                <div class="tile" tabindex="0"><span class="ext">md</span><div><b>loader-review.md</b><span>Documents\Hark</span></div></div>
+              </div>
+            </div>
+          </div></div>
+
+          <div class="dock"><div class="composer">
+            <div class="pending"><span class="file"><svg class="i"><use href="#s-doc"/></svg>requirements.docx<button type="button" aria-label="Remove requirements.docx"><svg class="i" style="width:13px;height:13px"><use href="#s-x"/></svg></button></span></div>
+            <textarea id="box" rows="1" placeholder="Ask about your repos, work items or data" aria-label="Message"></textarea>
+            <div class="bar">
+              <button class="icon-btn" type="button" aria-label="Attach files or images"><svg class="i"><use href="#s-clip"/></svg></button>
+              <button class="icon-btn" type="button" aria-label="Include my screen"><svg class="i"><use href="#s-screen"/></svg></button>
+              <button class="icon-btn" type="button" aria-label="Talk"><svg class="i"><use href="#s-mic"/></svg></button>
+              <span class="gap"></span>
+              <button class="model" type="button">Claude Sonnet 5.5<svg class="i" style="width:14px;height:14px"><use href="#s-down"/></svg></button>
+              <button class="send" type="button" id="send" aria-label="Send"><svg class="i"><use href="#s-up"/></svg><span class="stop"></span></button>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- NEW CHAT -->
+        <div class="page" id="p-new">
+          <div class="hello">
+            <div class="orb"><i></i><i></i><i></i></div>
+            <h2>What are we working on?</h2>
+            <div class="sugg">
+              <button type="button"><b>What is open this sprint?</b><span>Searches Azure DevOps work items</span></button>
+              <button type="button"><b>Where does this table come from?</b><span>Traces lineage in Purview</span></button>
+              <button type="button"><b>Start work on a repo</b><span>Pulls, branches and edits in your repos folder</span></button>
+              <button type="button"><b>What is on my screen?</b><span>Sends a capture of your desktop</span></button>
+            </div>
+          </div>
+          <div class="dock"><div class="composer">
+            <textarea rows="1" placeholder="Ask anything, or say “Hey Chat”" aria-label="Message"></textarea>
+            <div class="bar">
+              <button class="icon-btn" type="button" aria-label="Attach files or images"><svg class="i"><use href="#s-clip"/></svg></button>
+              <button class="icon-btn" type="button" aria-label="Include my screen"><svg class="i"><use href="#s-screen"/></svg></button>
+              <button class="icon-btn" type="button" aria-label="Talk"><svg class="i"><use href="#s-mic"/></svg></button>
+              <span class="gap"></span>
+              <button class="model" type="button">Auto<svg class="i" style="width:14px;height:14px"><use href="#s-down"/></svg></button>
+              <button class="send" type="button" aria-label="Send"><svg class="i"><use href="#s-up"/></svg><span class="stop"></span></button>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- HISTORY -->
+        <div class="page" id="p-history">
+          <div class="sheet"><div class="col">
+            <div class="group"><h3>Today</h3><div class="card">
+              <div class="srv"><div><b>Ingestion pipeline: sprint status</b><span>Three items are still open in Sprint 42…</span></div><span class="small">10:42</span></div>
+              <div class="srv"><div><b>Lineage for customer_orders</b><span>The asset is fed by two Synapse pipelines…</span></div><span class="small">09:15</span></div>
+            </div></div>
+            <div class="group"><h3>Yesterday</h3><div class="card">
+              <div class="srv"><div><b>Retry logic for the blob trigger</b><span>It lives in src/triggers/blob.py, lines 40 to 88.</span></div><span class="small">16:30</span></div>
+              <div class="srv"><div><b>Bugs from the standup notes</b><span>Created 4 bugs and linked them to feature #4701.</span></div><span class="small">11:05</span></div>
+            </div></div>
+          </div></div>
+        </div>
+
+        <!-- CONNECTIONS -->
+        <div class="page" id="p-conn">
+          <div class="sheet"><div class="col">
+            <div class="group"><h3>GitHub Copilot</h3><div class="card">
+              <div class="set"><div><b>Personal access token</b><span>Token accepted. 6 models available.</span></div><span class="badge ok">Connected</span><button class="btn" type="button">Replace</button></div>
+            </div></div>
+            <div class="group"><h3>Tool servers, from your VS Code mcp.json</h3><div class="card">
+              <div class="srv"><div><b>martechchat</b><span>.NET project. 31 tools for Azure DevOps and Purview.</span></div><span class="badge ok">Ready</span><input class="sw" id="c1" type="checkbox" checked aria-label="Use martechchat"></div>
+              <div class="srv"><div><b>ado-mcp</b><span>npx package. 19 tools.</span></div><span class="badge ok">Ready</span><input class="sw" id="c2" type="checkbox" checked aria-label="Use ado-mcp"></div>
+              <div class="srv"><div><b>tableau</b><span>29 tools.</span></div><span class="badge ok">Ready</span><input class="sw" id="c3" type="checkbox" checked aria-label="Use tableau"></div>
+              <div class="srv"><div><b>sonarqube</b><span>Did not start: it needs a value only VS Code can fill in.</span></div><span class="badge warn">Needs attention</span><input class="sw" id="c4" type="checkbox" aria-label="Use sonarqube"></div>
+            </div></div>
+          </div></div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="page" id="p-settings">
+          <div class="sheet"><div class="col">
+            <div class="group"><h3>Chat</h3><div class="card">
+              <div class="set"><div><b>Tool approvals</b><span>Tools run without asking.</span></div>
+                <div class="seg" role="group" aria-label="Tool approvals"><button type="button" aria-pressed="true">Allow all</button><button type="button" aria-pressed="false">Ask for changes</button><button type="button" aria-pressed="false">Always ask</button></div></div>
+              <div class="set"><div><b>Default model</b><span>Used for new chats.</span></div><input class="field" id="f1" value="Auto" aria-label="Default model"></div>
+            </div></div>
+            <div class="group"><h3>Voice</h3><div class="card">
+              <div class="set"><div><b>Listen for the wake phrase</b><span>Processed on this PC only.</span></div><input class="sw" id="v1" type="checkbox" checked aria-label="Listen for the wake phrase"></div>
+              <div class="set"><div><b>Wake phrase</b><span>Two plain words work best.</span></div><input class="field" id="f2" value="Hey Chat" aria-label="Wake phrase"></div>
+              <div class="set"><div><b>What Hark hears</b><span>Heard: “hey chat what is open this sprint”</span></div><div class="meter" aria-label="Microphone level"><i></i></div></div>
+            </div></div>
+            <div class="group"><h3>Folders</h3><div class="card">
+              <div class="set"><div><b>Repositories</b><span>49 repositories found.</span></div><input class="field" id="f3" value="C:\Users\you\source\repos" aria-label="Repositories folder"></div>
+              <div class="set"><div><b>Generated files</b><span>Where files you ask for are saved.</span></div><input class="field" id="f4" value="Documents\Hark" aria-label="Generated files folder"></div>
+            </div></div>
+          </div></div>
+        </div>
+
+        <div class="dim" id="dim"></div>
+        <div class="voice" id="voice" role="status" aria-live="polite">
+          <div class="orb sm" id="vorb"><i></i><i></i><i></i></div>
+          <div class="t"><b id="vt">Listening…</b><span class="sub" id="vs">Say what you need. Esc cancels.</span>
+            <div class="ans"><div>Three items are still open in <b>Sprint 42</b>.<ul><li>#4812 Null schema crashes the bronze loader</li><li>#4790 Add retry policy to the blob trigger</li><li>#4755 Backfill job for March partitions</li></ul></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>What changes</h2>
+    <div class="two">
+      <div class="note"><h3>Layout</h3><ul>
+        <li><b>Recent chats live in the sidebar</b>, so going back to one is a single click. History stays as the full, searchable list.</li>
+        <li><b>The title bar merges into the app.</b> No separate Windows strip above the content.</li>
+        <li><b>The message box floats</b> over the conversation as one rounded card holding attachments, screen, microphone, model and send.</li>
+        <li><b>Status moves to the sidebar foot:</b> Copilot, tool servers and voice, each with a live dot.</li>
+      </ul></div>
+      <div class="note"><h3>Conversation</h3><ul>
+        <li><b>Your messages are quiet tinted bubbles;</b> answers sit on the page without a box, so long answers read like a document.</li>
+        <li><b>Tool calls fold into one line</b> (“Used 2 tools in 1.9 s”) that opens to show each step.</li>
+        <li><b>Code blocks get a header</b> with the language and a Copy button. Answers get Copy and Try again on hover.</li>
+        <li><b>Generated files are tiles</b> you click to open.</li>
+        <li><b>A new chat opens with four starting points</b> drawn from your own tools.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>Look</h2>
+    <div class="two">
+      <div class="note"><h3>Colour</h3>
+        <div class="sw-row">
+          <span class="swatch"><i style="background:var(--canvas)"></i>Canvas</span>
+          <span class="swatch"><i style="background:var(--surface)"></i>Surface</span>
+          <span class="swatch"><i style="background:var(--ink)"></i>Ink</span>
+          <span class="swatch"><i style="background:var(--signal)"></i>Signal</span>
+          <span class="swatch"><i style="background:var(--user)"></i>Your messages</span>
+        </div>
+        <p class="small" style="margin-top:12px">Cool neutrals with one accent, the cyan already in the app icon. The accent is spent on the send button, focus, links and the orb, and nowhere else. Light and dark are both designed; this page follows your theme.</p>
+      </div>
+      <div class="note"><h3>Type and shape</h3><ul>
+        <li><b>Geist</b> for the interface and <b>Geist Mono</b> for code only. Both are free to bundle with the app.</li>
+        <li><b>Three corner sizes by role:</b> small controls, cards, and the floating message box.</li>
+        <li><b>The orb is the one expressive element.</b> It appears on a new chat and in the voice panel, and speeds up with your voice.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>Motion</h2>
+    <div class="motion">
+      <div><b>Changing page</b><span>The selection pill slides to the new item while the page fades up.</span><em>320 ms</em></div>
+      <div><b>New message</b><span>Rises a few pixels and fades in. Streaming text ends in a soft caret.</span><em>360 ms</em></div>
+      <div><b>Send and stop</b><span>The round send button squares off into a stop button while Hark is working.</span><em>300 ms</em></div>
+      <div><b>Tool activity</b><span>A spinner becomes a tick; the line opens smoothly to show its steps.</span><em>250 ms</em></div>
+      <div><b>Voice panel</b><span>Springs up from the bottom edge, then grows in place to hold the answer.</span><em>500 ms</em></div>
+      <div><b>Reduced motion</b><span>If Windows animation effects are off, everything switches instantly.</span><em>0 ms</em></div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>How it gets built, and what to expect</h2>
+    <div class="two">
+      <div class="note"><h3>Approach</h3><ul>
+        <li>Same WPF app and the same logic underneath. Only the views, styles and control templates are rebuilt.</li>
+        <li>Built in four passes, each with build screenshots for you: shell and sidebar, conversation, message box, then Settings, Connections and the voice panel.</li>
+        <li>No new paid components. The fonts are open source.</li>
+      </ul></div>
+      <div class="note"><h3>Honest limits</h3><ul>
+        <li>This mock is a web page. The WPF result should match its layout, colour and type closely, but text rendering and some easing will differ slightly.</li>
+        <li>The orb’s soft blur is the costliest effect. If it stutters on your laptop it falls back to a simpler pulse.</li>
+        <li>I can check still screenshots from the build, not motion. You would be the one judging how the animations feel.</li>
+      </ul></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var app=document.getElementById('app'), pill=document.getElementById('pill');
+  var navBtns=[].slice.call(document.querySelectorAll('.nav button'));
+  var titles={chat:'Ingestion pipeline: sprint status','new':'New chat',history:'History',conn:'Connections',settings:'Settings'};
+  function go(name){
+    document.querySelectorAll('.page').forEach(function(p){p.classList.toggle('on',p.id==='p-'+name)});
+    document.getElementById('title').textContent=titles[name];
+    var navName=name==='new'?'chat':name, idx=0;
+    navBtns.forEach(function(b,i){var on=b.dataset.go===navName;b.setAttribute('aria-current',on?'true':'false');if(on)idx=i});
+    pill.style.transform='translateY('+(idx*38)+'px)';
+    document.querySelectorAll('.controls [data-go]').forEach(function(c){c.setAttribute('aria-pressed',c.dataset.go===name?'true':'false')});
+    hideVoice();
+  }
+  document.querySelectorAll('[data-go]').forEach(function(b){b.addEventListener('click',function(){go(b.dataset.go)})});
+
+  document.querySelectorAll('.seg').forEach(function(seg){seg.addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b)return;
+    seg.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+  })});
+
+  // Replay: tools run, then the answer streams in.
+  var prose=document.getElementById('prose'), act=document.getElementById('act'), full=prose.innerHTML, timer=null;
+  function replay(){
+    go('chat'); clearInterval(timer); app.dataset.busy='1'; act.open=false;
+    document.getElementById('actdot').outerHTML='<span class="spin" id="actdot"></span>';
+    document.getElementById('acttext').innerHTML='Searching work items…';
+    prose.innerHTML=''; var blocks=[]; var tmp=document.createElement('div'); tmp.innerHTML=full;
+    [].slice.call(tmp.children).forEach(function(c){blocks.push(c)});
+    setTimeout(function(){
+      document.getElementById('actdot').outerHTML='<span class="tick" id="actdot"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.4 2.4 4.6-5"/></svg></span>';
+      document.getElementById('acttext').innerHTML='Used <b>2 tools</b> in 1.9 s';
+      var i=0;
+      timer=setInterval(function(){
+        if(i>=blocks.length){clearInterval(timer);app.dataset.busy='0';var c=prose.querySelector('.caret');if(c)c.remove();return}
+        var old=prose.querySelector('.caret'); if(old)old.remove();
+        var el=blocks[i++]; el.style.animation='rise .4s cubic-bezier(.2,.8,.2,1)'; prose.appendChild(el);
+        var last=prose.querySelector('p:last-of-type'); if(last&&el.tagName==='P'){var c=document.createElement('span');c.className='caret';el.appendChild(c)}
+        var t=document.getElementById('thread'); t.scrollTop=0;
+      },520);
+    },1500);
+  }
+  document.getElementById('replay').addEventListener('click',replay);
+  document.getElementById('send').addEventListener('click',function(){ if(app.dataset.busy==='1'){clearInterval(timer);app.dataset.busy='0';prose.innerHTML=full}else replay() });
+
+  // Voice preview: listening, heard, working, answer.
+  var voice=document.getElementById('voice'), dim=document.getElementById('dim'), vt=document.getElementById('vt'), vs=document.getElementById('vs'), vorb=document.getElementById('vorb'), vq=[];
+  function hideVoice(){vq.forEach(clearTimeout);vq=[];voice.classList.remove('on','answer');dim.classList.remove('on');vorb.classList.remove('loud')}
+  function showVoice(){
+    hideVoice(); voice.classList.add('on'); dim.classList.add('on'); vorb.classList.add('loud');
+    vt.textContent='Listening…'; vs.textContent='Say what you need. Esc cancels.';
+    vq.push(setTimeout(function(){vs.textContent='“What is still open this sprint?”'},1500));
+    vq.push(setTimeout(function(){vorb.classList.remove('loud');vt.textContent='Working…'},2600));
+    vq.push(setTimeout(function(){vt.textContent='Here is what I found';voice.classList.add('answer')},4200));
+    vq.push(setTimeout(hideVoice,11000));
+  }
+  document.getElementById('voicebtn').addEventListener('click',showVoice);
+  dim.addEventListener('click',hideVoice);
+})();
+</script>

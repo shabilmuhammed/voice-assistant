@@ -1,23 +1,35 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "83485963700bcf11d5bf78118facb301676b69d918fee2e45a95e7f1a2840f6c"
+    },
     "hallmark": {
       "source": "nutlope/hallmark",
       "sourceType": "github",
       "skillPath": "skills/hallmark/SKILL.md",
-      "computedHash": "1465546d7971f57d428a0cbccfe0fa0426d1c309bec28ceefeb70e76f38c640e"
+      "computedHash": "cf963e3ee1f036362ca71e1ceceb43f0ddfa88501334072c16aecbedabb58bc1"
     },
     "impeccable": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
       "skillPath": ".agents/skills/impeccable/SKILL.md",
-      "computedHash": "731d7fbd8800a9ad70a04c8834c25304370b4c3310866ff26bfd14e0c3b12975"
+      "computedHash": "6af2b5da01ee2d7cf52cf54781e361e030ff332b633a1a812219e0b98721ebd8"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/web-design-guidelines/SKILL.md",
+      "computedHash": "4f68ae07187fb0d1fb78c88b503d089da4cf5a9d9625d1f2e425b1590bf96d92"
     },
     "wpf": {
       "source": "managedcode/dotnet-skills",
       "sourceType": "github",
       "skillPath": "catalog/Frameworks/WPF/skills/wpf/SKILL.md",
-      "computedHash": "d7568e857eaf8e53932006bfe703421df90b0625fcca1841aa37b126fb6c5d56"
+      "computedHash": ""
     }
   }
 }
