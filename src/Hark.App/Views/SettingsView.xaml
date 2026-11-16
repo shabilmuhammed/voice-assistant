@@ -28,13 +28,15 @@
                                 <TextBlock Text="Used for new chats. You can still switch per chat." Style="{StaticResource Secondary}" />
                             </StackPanel>
                         </DockPanel>
-                        <CheckBox IsChecked="{Binding AutoApproveReadOnlyTools, Mode=TwoWay}" Margin="0,14,0,0">
-                            <StackPanel>
-                                <TextBlock Text="Let tools read without asking" FontWeight="SemiBold" />
-                                <TextBlock Text="Tools that only look things up run straight away. Anything that creates or changes something still asks first."
-                                           Style="{StaticResource Secondary}" />
+                        <DockPanel Margin="0,16,0,0">
+                            <ComboBox DockPanel.Dock="Right" MinWidth="220" ItemsSource="{Binding Approvals}" DisplayMemberPath="Label"
+                                      SelectedItem="{Binding Approval, Mode=TwoWay}" VerticalAlignment="Top"
+                                      AutomationProperties.Name="Tool approvals" />
+                            <StackPanel Margin="0,0,16,0">
+                                <TextBlock Text="Tool approvals" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding ApprovalExplanation}" Style="{StaticResource Secondary}" />
                             </StackPanel>
-                        </CheckBox>
+                        </DockPanel>
                     </StackPanel>
                 </Border>
 
@@ -77,6 +79,37 @@
                             <TextBlock Text="Microphone" FontWeight="SemiBold" VerticalAlignment="Center" />
                         </DockPanel>
 
+                        <CheckBox IsChecked="{Binding WakeOnWords, Mode=TwoWay}" Margin="0,16,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Also wake on recognised words" FontWeight="SemiBold" />
+                                <TextBlock Text="Hark transcribes what it hears on this PC and wakes when the words match. It reacts after a short pause and copes better with accents."
+                                           Style="{StaticResource Secondary}" />
+                            </StackPanel>
+                        </CheckBox>
+
+                        <DockPanel Margin="0,16,0,0">
+                            <TextBox DockPanel.Dock="Right" Width="220" VerticalAlignment="Center"
+                                     Text="{Binding AlsoWakeOn, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     AutomationProperties.Name="Also wake on" />
+                            <StackPanel Margin="0,0,16,0">
+                                <TextBlock Text="Also wake on" FontWeight="SemiBold" />
+                                <TextBlock Text="If the check below shows your wake phrase heard as something else, add that here. Separate phrases with commas."
+                                           Style="{StaticResource Secondary}" />
+                            </StackPanel>
+                        </DockPanel>
+
+                        <Border Margin="0,18,0,0" Padding="12,10" CornerRadius="6" BorderThickness="1"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                            <StackPanel>
+                                <TextBlock Text="What Hark hears" FontWeight="SemiBold" />
+                                <TextBlock Text="Speak normally. The bar should move, and what you said should appear below within a second or two."
+                                           Style="{StaticResource Secondary}" Margin="0,2,0,8" />
+                                <ProgressBar Minimum="0" Maximum="1" Height="6" Value="{Binding Voice.Level, Mode=OneWay}"
+                                             AutomationProperties.Name="Microphone level" />
+                                <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding Voice.LastHeard}" />
+                            </StackPanel>
+                        </Border>
+
                         <TextBlock Style="{StaticResource Secondary}" Margin="0,16,0,0"
                                    Text="Ctrl + Alt + Space starts listening without the wake phrase. Esc cancels while Hark is listening." />
                         <TextBlock Text="{Binding VoiceNote}" TextWrapping="Wrap" FontSize="12.5" Margin="0,8,0,0"
@@ -105,7 +138,7 @@
                     <StackPanel>
                         <TextBlock Text="Repositories folder" FontWeight="SemiBold" />
                         <TextBlock Style="{StaticResource Secondary}" Margin="0,2,0,8"
-                                   Text="The folder that holds your cloned repos, for example C:\Users\you\source\repos. Copilot can pull, branch, edit, and commit and push when you ask it to. Each command asks first unless you allow commands for that chat." />
+                                   Text="The folder that holds your cloned repos, for example C:\Users\you\source\repos. Copilot can pull, branch, edit, and commit and push when you ask it to. " />
                         <TextBox Text="{Binding ReposRoot, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                  AutomationProperties.Name="Repositories folder" />
                         <TextBlock Text="{Binding ReposNote}" Style="{StaticResource Secondary}" Margin="0,6,0,18" />

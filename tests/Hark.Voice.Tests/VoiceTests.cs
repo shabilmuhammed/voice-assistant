@@ -127,6 +127,63 @@ public class VoiceTests(ITestOutputHelper output)
         Assert.Equal(expected, TranscriptFixes.Apply(heard, fixes));
     }
 
+    // ---- waking on recognised words (the accent-tolerant path) ----
+
+    [Theory]
+    [InlineData("Hey chat, what is open?", true, "What is open?")]
+    [InlineData("Hay chat what is open", true, "What is open")]
+    [InlineData("Hi Chat.", true, "")]
+    [InlineData("A chat, list the bugs", true, "List the bugs")]
+    [InlineData("Okay so hey chat list the bugs", true, "List the bugs")]
+    [InlineData("We had a chat about the release", false, "")]
+    [InlineData("Hey Chad, how are you?", false, "")]
+    [InlineData("They chatted for an hour", false, "")]
+    public void Finds_the_wake_phrase_in_recognised_words(string heard, bool found, string rest)
+    {
+        var match = WakeMatcher.Find(heard, ["Hey Chat"]);
+        Assert.Equal(found, match.Found);
+        Assert.Equal(rest, match.Rest);
+    }
+
+    [Fact]
+    public void Also_wake_on_phrases_are_honoured()
+    {
+        Assert.True(WakeMatcher.Find("Hey Chad, list the bugs", ["Hey Chat", "hey chad"]).Found);
+        Assert.Equal("List the bugs", WakeMatcher.Find("Hey Chad, list the bugs", ["Hey Chat", "hey chad"]).Rest);
+    }
+
+    [Fact]
+    public void Wakes_from_recognised_words_alone()
+    {
+        if (Models is null) { output.WriteLine("Models not downloaded; skipped."); return; }
+        using var engine = new VoiceEngine(Models, "Hey Chat", sensitivity: 5) { SpotterEnabled = false };
+        var heard = new List<string>();
+        engine.Heard += heard.Add;
+
+        var run = Play(engine, "hey-chat-question");
+        output.WriteLine("heard: " + string.Join(" | ", heard) + "  ->  " + string.Join(" | ", run.Texts));
+
+        Assert.Equal(1, run.Wakes);
+        var text = Assert.Single(run.Texts).ToLowerInvariant();
+        Assert.Contains("what is still open", text);
+        Assert.Contains("sprint", text);
+        Assert.Equal(VoiceState.Idle, engine.State);
+    }
+
+    [Fact]
+    public void Recognised_words_do_not_wake_on_ordinary_speech()
+    {
+        if (Models is null) { output.WriteLine("Models not downloaded; skipped."); return; }
+        using var engine = new VoiceEngine(Models, "Hey Chat", sensitivity: 5) { SpotterEnabled = false };
+        var heard = new List<string>();
+        engine.Heard += heard.Add;
+        Assert.Equal(0, Play(engine, "no-wake").Wakes);
+        Assert.NotEmpty(heard); // it did listen and transcribe, it just did not wake
+    }
+
+    // Known limit: a name that sounds the same ("Hey Chad") is heard as "Hey chat" by the recognizer,
+    // so the word-based path wakes on it. Only the sound-based spotter at a strict setting tells them apart.
+
     [Fact]
     public void Stays_asleep_without_the_wake_phrase()
     {
@@ -141,7 +198,7 @@ public class VoiceTests(ITestOutputHelper output)
     public void A_strict_setting_ignores_a_similar_sounding_name()
     {
         if (Models is null) { output.WriteLine("Models not downloaded; skipped."); return; }
-        using var engine = new VoiceEngine(Models, "Hey Chat", sensitivity: 3);
+        using var engine = new VoiceEngine(Models, "Hey Chat", sensitivity: 3) { WordWakeEnabled = false };
         Assert.Equal(0, Play(engine, "hey-chad").Wakes);
     }
 

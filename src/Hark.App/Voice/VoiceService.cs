@@ -21,11 +21,17 @@ public sealed class VoiceService : IDisposable
     private VoiceEngine? _engine;
     private WaveIn? _mic;
     private volatile bool _running;
+    private bool _audioSeen;
+    private float _peak;
+    private long _samplesSeen;
 
     public event Action? Woke;
     public event Action? Cancelled;
     public event Action<string>? Transcribed;
     public event Action<float>? Level;
+
+    /// <summary>Everything understood while waiting for the wake phrase (for the "what Hark hears" check).</summary>
+    public event Action<string>? Heard;
 
     /// <summary>Why voice is not running; empty when it is.</summary>
     public string Problem { get; private set; } = "";
@@ -59,7 +65,7 @@ public sealed class VoiceService : IDisposable
         return null;
     }
 
-    public bool Start(string wakePhrase, int sensitivity, int device)
+    public bool Start(string wakePhrase, int sensitivity, int device, bool wakeOnWords, IEnumerable<string> alsoWakeOn)
     {
         Stop();
         Problem = "";
@@ -82,6 +88,12 @@ public sealed class VoiceService : IDisposable
             _engine.Cancelled += () => Cancelled?.Invoke();
             _engine.Transcribed += text => Transcribed?.Invoke(text);
             _engine.Level += level => Level?.Invoke(level);
+            _engine.Heard += text => Heard?.Invoke(text);
+            _engine.WordWakeEnabled = wakeOnWords;
+            _engine.SetAlsoWakeOn(alsoWakeOn);
+            _audioSeen = false;
+            _peak = 0;
+            _samplesSeen = 0;
 
             var queue = new BlockingCollection<object>(new ConcurrentQueue<object>());
             var engine = _engine;
@@ -120,6 +132,16 @@ public sealed class VoiceService : IDisposable
         var samples = new float[e.BytesRecorded / 2];
         for (var i = 0; i < samples.Length; i++)
             samples[i] = BitConverter.ToInt16(e.Buffer, i * 2) / 32768f;
+
+        // One line in the log proves audio is arriving and how loud it is, which separates
+        // "the microphone is not reaching Hark" from "the phrase is not being recognised".
+        foreach (var sample in samples) _peak = Math.Max(_peak, Math.Abs(sample));
+        _samplesSeen += samples.Length;
+        if (!_audioSeen && _samplesSeen >= 16000 * 5)
+        {
+            _audioSeen = true;
+            Log.Info($"Microphone is delivering audio. Loudest level in the first 5 seconds: {_peak:P0}.");
+        }
         // If transcription falls far behind, drop audio rather than grow without limit.
         var queue = _queue;
         if (queue is { IsAddingCompleted: false, Count: < 400 })

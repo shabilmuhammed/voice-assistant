@@ -28,6 +28,7 @@ public sealed partial class VoiceViewModel : ObservableObject
         _service.Cancelled += () => OnUi(Hide);
         _service.Transcribed += text => OnUi(() => OnTranscribed(text));
         _service.Level += level => OnUi(() => Level = level, DispatcherPriority.Render);
+        _service.Heard += text => OnUi(() => LastHeard = $"Heard: \u201C{text}\u201D");
 
         main.Chat.AssistantTextChanged += text => { if (_voiceTurn) { Answer = text; State = OverlayState.Answer; } };
         main.Chat.TurnEnded += OnTurnEnded;
@@ -52,6 +53,10 @@ public sealed partial class VoiceViewModel : ObservableObject
     /// <summary>Microphone loudness, 0 to 1.</summary>
     [ObservableProperty]
     private float _level;
+
+    /// <summary>The latest thing understood while waiting for the wake phrase.</summary>
+    [ObservableProperty]
+    private string _lastHeard = "Nothing heard yet.";
 
     /// <summary>Shown in the main window: whether Hark is listening for the wake phrase.</summary>
     [ObservableProperty]
@@ -89,7 +94,9 @@ public sealed partial class VoiceViewModel : ObservableObject
             return;
         }
 
-        IsRunning = _service.Start(settings.WakePhrase, settings.WakeSensitivity, settings.MicrophoneDevice);
+        IsRunning = _service.Start(settings.WakePhrase, settings.WakeSensitivity, settings.MicrophoneDevice,
+            settings.WakeOnRecognisedWords, settings.AlsoWakeOn);
+        LastHeard = IsRunning ? "Nothing heard yet." : "Voice is not running.";
         StatusText = IsRunning ? $"Say “{settings.WakePhrase.Trim()}”" : _service.Problem;
     }
 

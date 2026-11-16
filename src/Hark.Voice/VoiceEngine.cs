@@ -25,6 +25,9 @@ public sealed class VoiceEngine : IDisposable
     private readonly VoiceModels _models;
     private readonly OfflineRecognizer _recognizer;
     private readonly VoiceActivityDetector _vad;
+    private readonly VoiceActivityDetector _idleVad;   // finds whole utterances while waiting for the wake phrase
+    private readonly List<float> _idlePending = new();
+    private List<string> _wakePhrases = new();
     private KeywordSpotter _spotter;
     private OnlineStream _spotterStream;
 
@@ -73,8 +76,38 @@ public sealed class VoiceEngine : IDisposable
         vad.NumThreads = 1;
         _vad = new VoiceActivityDetector(vad, 60);
 
+        var idle = new VadModelConfig();
+        idle.SileroVad.Model = models.Vad;
+        idle.SileroVad.Threshold = 0.5f;
+        idle.SileroVad.MinSilenceDuration = 0.6f;
+        idle.SileroVad.MinSpeechDuration = 0.25f;
+        idle.SileroVad.MaxSpeechDuration = 20f;
+        idle.SileroVad.WindowSize = VadWindow;
+        idle.SampleRate = SampleRate;
+        idle.NumThreads = 1;
+        _idleVad = new VoiceActivityDetector(idle, 60);
+
         (_spotter, _spotterStream) = CreateSpotter(wakePhrase, sensitivity);
+        _wakePhrases = [wakePhrase];
     }
+
+    /// <summary>
+    /// The fast, sound-based detector. Turn off to rely only on recognised words (used by tests).
+    /// </summary>
+    public bool SpotterEnabled { get; set; } = true;
+
+    /// <summary>
+    /// The word-based detector: every utterance is transcribed on this PC and checked for the wake phrase.
+    /// Slower to react (it waits for a pause) but far more tolerant of accents.
+    /// </summary>
+    public bool WordWakeEnabled { get; set; } = true;
+
+    /// <summary>Extra phrases that also wake Hark, for example how the recognizer hears your "Hey Chat".</summary>
+    public void SetAlsoWakeOn(IEnumerable<string> phrases) =>
+        _wakePhrases = _wakePhrases.Take(1).Concat(phrases.Where(p => !string.IsNullOrWhiteSpace(p))).ToList();
+
+    /// <summary>Everything the word-based detector understood while idle. For the "what Hark hears" check.</summary>
+    public event Action<string>? Heard;
 
     public VoiceState State { get; private set; } = VoiceState.Idle;
 
@@ -99,6 +132,7 @@ public sealed class VoiceEngine : IDisposable
         _spotter = spotter;
         _spotterStream = stream;
         _fedToSpotter = 0;
+        _wakePhrases = new[] { wakePhrase }.Concat(_wakePhrases.Skip(1)).ToList();
     }
 
     private (KeywordSpotter, OnlineStream) CreateSpotter(string wakePhrase, int sensitivity)
@@ -156,7 +190,8 @@ public sealed class VoiceEngine : IDisposable
         switch (State)
         {
             case VoiceState.Idle:
-                FeedSpotter(samples);
+                if (SpotterEnabled) FeedSpotter(samples);
+                if (State == VoiceState.Idle && WordWakeEnabled) FeedWordWake(samples);
                 break;
             case VoiceState.Listening:
                 FeedListener(samples);
@@ -197,6 +232,47 @@ public sealed class VoiceEngine : IDisposable
         if (_fedToSpotter > RefreshSpotterAfter) RestartSpotterStream();
     }
 
+    /// <summary>Cuts idle audio into utterances, transcribes each, and wakes if the phrase is in the words.</summary>
+    private void FeedWordWake(ReadOnlySpan<float> samples)
+    {
+        _idlePending.AddRange(samples);
+        var offset = 0;
+        var buffer = new float[VadWindow];
+        while (_idlePending.Count - offset >= VadWindow)
+        {
+            _idlePending.CopyTo(offset, buffer, 0, VadWindow);
+            offset += VadWindow;
+            _idleVad.AcceptWaveform(buffer);
+        }
+        _idlePending.RemoveRange(0, offset);
+
+        while (!_idleVad.IsEmpty())
+        {
+            var utterance = _idleVad.Front().Samples;
+            _idleVad.Pop();
+            if (utterance.Length < SampleRate / 3) continue;
+
+            var text = Transcribe(utterance);
+            if (text.Length == 0) continue;
+            Heard?.Invoke(text);
+
+            var match = WakeMatcher.Find(text, _wakePhrases);
+            if (!match.Found) continue;
+
+            _idleVad.Reset();
+            _idlePending.Clear();
+            RestartSpotterStream();
+            if (match.Rest.Length > 0)
+            {
+                // The request came in the same breath as the phrase: "Hey Chat, what is open?"
+                Woke?.Invoke();
+                Transcribed?.Invoke(match.Rest);
+            }
+            else BeginListening();
+            return;
+        }
+    }
+
     private void RestartSpotterStream()
     {
         _spotterStream.Dispose();
@@ -208,6 +284,8 @@ public sealed class VoiceEngine : IDisposable
     {
         _pending.Clear();
         _speech.Clear();
+        _idleVad.Reset();
+        _idlePending.Clear();
         _listenedSamples = 0;
         _heardSpeech = false;
         _wokeByPhrase = false;
@@ -331,6 +409,7 @@ public sealed class VoiceEngine : IDisposable
         _spotterStream.Dispose();
         _spotter.Dispose();
         _vad.Dispose();
+        _idleVad.Dispose();
         _recognizer.Dispose();
     }
 }

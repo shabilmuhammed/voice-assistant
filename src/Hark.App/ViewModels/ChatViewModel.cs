@@ -495,13 +495,18 @@ public sealed partial class ChatViewModel : ObservableObject
 
     private Task<ToolApproval> ApproveAsync(ToolApprovalRequest request)
     {
+        var mode = _main.Settings.ApprovalMode;
+
+        // "Allow all": tools run without asking. This is the default and can be changed in Settings.
+        if (mode == "AllowAll") return Task.FromResult(ToolApproval.AllowOnce);
+
         // Saving into the output folder is what that folder is for, so it never asks.
         if (request.Kind == ToolKind.Write && RepoPolicy.IsInside(_main.Settings.EffectiveOutputFolder, request.Target))
             return Task.FromResult(ToolApproval.AllowOnce);
 
         // A file edit outside the repos folder always asks, even after "allow edits for this chat".
         var insideRepos = request.Kind != ToolKind.Write || RepoPolicy.IsInside(_main.Settings.ReposRoot, request.Target);
-        if ((insideRepos && _alwaysAllowed.Contains(request.Key)) || (request.ReadOnly && _main.Settings.AutoApproveReadOnlyTools))
+        if ((insideRepos && _alwaysAllowed.Contains(request.Key)) || (request.ReadOnly && mode != "AskAlways"))
             return Task.FromResult(ToolApproval.AllowOnce);
 
         var dispatcher = Application.Current?.Dispatcher;

@@ -25,6 +25,12 @@ public sealed class AppSettings
     /// <summary>1 (strict, fewer false wake-ups) to 10 (loose, wakes more easily).</summary>
     public int WakeSensitivity { get; set; } = 5;
 
+    /// <summary>Also wake on what was understood, not only on the sound of the phrase. Better with accents.</summary>
+    public bool WakeOnRecognisedWords { get; set; } = true;
+
+    /// <summary>Extra phrases that wake Hark, for example how the recognizer hears your wake phrase.</summary>
+    public List<string> AlsoWakeOn { get; set; } = new();
+
     /// <summary>Microphone to use; -1 is the Windows default device.</summary>
     public int MicrophoneDevice { get; set; } = -1;
 
@@ -40,7 +46,11 @@ public sealed class AppSettings
     /// <summary>True once the first-run default for ReposRoot has been considered.</summary>
     public bool ReposRootSuggested { get; set; }
     public bool CloseToTray { get; set; } = true;
-    public bool AutoApproveReadOnlyTools { get; set; } = true;
+    /// <summary>
+    /// When tools ask before running: "AllowAll" (never ask), "AskForChanges" (reading is automatic, anything
+    /// that creates or changes something asks) or "AskAlways".
+    /// </summary>
+    public string ApprovalMode { get; set; } = "AllowAll";
     public List<string> DisabledServers { get; set; } = new();
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };

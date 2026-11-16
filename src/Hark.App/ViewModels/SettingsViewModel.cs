@@ -19,7 +19,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         _main = main;
         _closeToTray = main.Settings.CloseToTray;
-        _autoApproveReadOnlyTools = main.Settings.AutoApproveReadOnlyTools;
+        _approval = Approvals.FirstOrDefault(a => a.Mode == main.Settings.ApprovalMode) ?? Approvals[0];
+        _alsoWakeOn = string.Join(", ", main.Settings.AlsoWakeOn);
+        _wakeOnWords = main.Settings.WakeOnRecognisedWords;
         _mcpConfigPath = main.Settings.McpConfigPath ?? "";
         _reposRoot = main.Settings.ReposRoot ?? "";
         _reposNote = DescribeRepos(_reposRoot);
@@ -41,8 +43,29 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _closeToTray;
 
+    public sealed record ApprovalChoice(string Mode, string Label, string Explanation)
+    {
+        public override string ToString() => Label;
+    }
+
+    public IReadOnlyList<ApprovalChoice> Approvals { get; } =
+    [
+        new("AllowAll", "Allow all", "Tools run without asking, including commands, file edits, and creating or changing work items."),
+        new("AskForChanges", "Ask before changes", "Looking things up runs straight away. Anything that creates or changes something asks first."),
+        new("AskAlways", "Always ask", "Every tool asks before it runs."),
+    ];
+
     [ObservableProperty]
-    private bool _autoApproveReadOnlyTools;
+    [NotifyPropertyChangedFor(nameof(ApprovalExplanation))]
+    private ApprovalChoice _approval;
+
+    public string ApprovalExplanation => Approval.Explanation;
+
+    [ObservableProperty]
+    private string _alsoWakeOn;
+
+    [ObservableProperty]
+    private bool _wakeOnWords;
 
     [ObservableProperty]
     private bool _startWithWindows;
@@ -152,11 +175,25 @@ public sealed partial class SettingsViewModel : ObservableObject
         Save();
     }
 
-    partial void OnAutoApproveReadOnlyToolsChanged(bool value)
+    partial void OnApprovalChanged(ApprovalChoice value)
+    {
+        if (_loading || value is null) return;
+        _main.Settings.ApprovalMode = value.Mode;
+        Save();
+    }
+
+    partial void OnAlsoWakeOnChanged(string value)
     {
         if (_loading) return;
-        _main.Settings.AutoApproveReadOnlyTools = value;
-        Save();
+        _main.Settings.AlsoWakeOn = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        ApplyVoice();
+    }
+
+    partial void OnWakeOnWordsChanged(bool value)
+    {
+        if (_loading) return;
+        _main.Settings.WakeOnRecognisedWords = value;
+        ApplyVoice();
     }
 
     partial void OnMcpConfigPathChanged(string value)
