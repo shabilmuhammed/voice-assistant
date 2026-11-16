@@ -28,6 +28,12 @@ public sealed partial class VoiceViewModel : ObservableObject
         _service.Cancelled += () => OnUi(Hide);
         _service.Transcribed += text => OnUi(() => OnTranscribed(text));
         _service.Level += level => OnUi(() => Level = level, DispatcherPriority.Render);
+        _service.Silent += () => OnUi(() =>
+        {
+            StatusText = "Microphone is silent";
+            LastHeard = "No sound is reaching Hark. In Windows, open Settings, Privacy and security, Microphone, and turn on " +
+                        "\u201CLet desktop apps access your microphone\u201D. If it is already on, pick your headset or laptop microphone above.";
+        });
         _service.Heard += text => OnUi(() => LastHeard = $"Heard: \u201C{text}\u201D");
 
         main.Chat.AssistantTextChanged += text => { if (_voiceTurn) { Answer = text; State = OverlayState.Answer; } };

@@ -30,6 +30,9 @@ public sealed class VoiceService : IDisposable
     public event Action<string>? Transcribed;
     public event Action<float>? Level;
 
+    /// <summary>The microphone has delivered only silence since it was started.</summary>
+    public event Action? Silent;
+
     /// <summary>Everything understood while waiting for the wake phrase (for the "what Hark hears" check).</summary>
     public event Action<string>? Heard;
 
@@ -140,7 +143,8 @@ public sealed class VoiceService : IDisposable
         if (!_audioSeen && _samplesSeen >= 16000 * 5)
         {
             _audioSeen = true;
-            Log.Info($"Microphone is delivering audio. Loudest level in the first 5 seconds: {_peak:P0}.");
+            Log.Info($"Microphone check after 5 seconds: loudest sample {_peak:0.00000} (1.0 is full scale).");
+            if (_peak < 0.0005f) Silent?.Invoke();
         }
         // If transcription falls far behind, drop audio rather than grow without limit.
         var queue = _queue;

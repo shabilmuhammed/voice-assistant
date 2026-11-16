@@ -67,17 +67,16 @@
         <Setter Property="FontWeight" Value="Medium" />
         <Setter Property="FontSize" Value="13.5" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
-        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
-        <Setter Property="RenderTransform">
-            <Setter.Value><ScaleTransform /></Setter.Value>
-        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="9" Padding="{TemplateBinding Padding}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="9" Padding="{TemplateBinding Padding}"
+                            RenderTransformOrigin="0.5,0.5">
+                        <Border.RenderTransform><ScaleTransform x:Name="Press" /></Border.RenderTransform>
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" RecognizesAccessKey="True" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -90,16 +89,16 @@
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="0.97" Duration="0:0:0.08" />
-                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="0.97" Duration="0:0:0.08" />
+                                        <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleX" To="0.97" Duration="0:0:0.08" />
+                                        <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleY" To="0.97" Duration="0:0:0.08" />
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.EnterActions>
                             <Trigger.ExitActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.18" />
-                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.18" />
+                                        <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.18" />
+                                        <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.18" />
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.ExitActions>
