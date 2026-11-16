@@ -4,216 +4,420 @@
              xmlns:vm="clr-namespace:Hark.App.ViewModels"
              xmlns:ctl="clr-namespace:Hark.App.Controls"
              AllowDrop="True" DragOver="OnDragOver" Drop="OnDrop">
-    <Grid Background="Transparent">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
-        <!-- Header: title, model, new chat -->
-        <Border Grid.Row="0" Padding="24,14" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-            <DockPanel>
-                <Button DockPanel.Dock="Right" Command="{Binding NewChatCommand}" Margin="12,0,0,0" Padding="12,6">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Style="{StaticResource Icon}" FontSize="13" Text="&#xE710;" Margin="0,0,8,0" />
-                        <TextBlock Text="New chat" />
-                    </StackPanel>
-                </Button>
-                <ComboBox DockPanel.Dock="Right" MinWidth="190" VerticalAlignment="Center"
-                          ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel, Mode=TwoWay}"
-                          DisplayMemberPath="Name" AutomationProperties.Name="Model" />
-                <TextBlock DockPanel.Dock="Right" Text="Model" Style="{StaticResource Secondary}" VerticalAlignment="Center" Margin="12,0,8,0" />
-                <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitle}" />
-            </DockPanel>
-        </Border>
-
-        <!-- Messages -->
-        <ScrollViewer x:Name="Scroller" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
-            <Grid>
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="420" Margin="24"
-                            x:Name="EmptyState">
-                    <TextBlock Text="Ask about your repos, work items or data" FontSize="18" FontWeight="SemiBold"
-                               TextAlignment="Center" TextWrapping="Wrap" />
-                    <TextBlock Style="{StaticResource Secondary}" TextAlignment="Center" Margin="0,8,0,0"
-                               Text="Hark sends your message to GitHub Copilot and lets it use the tools from your mcp.json. Press Enter to send, Shift+Enter for a new line." />
+    <UserControl.Resources>
+        <!-- The small Hark mark beside each answer. -->
+        <ControlTemplate x:Key="MiniMark" TargetType="ContentControl">
+            <Border Width="20" Height="20" CornerRadius="6" Background="{DynamicResource H.Signal}">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Rectangle Width="2" Height="4" RadiusX="1" RadiusY="1" Fill="{DynamicResource H.OnSignal}" Margin="0,0,2,0" />
+                    <Rectangle Width="2" Height="8" RadiusX="1" RadiusY="1" Fill="{DynamicResource H.OnSignal}" Margin="0,0,2,0" />
+                    <Rectangle Width="2" Height="10" RadiusX="1" RadiusY="1" Fill="{DynamicResource H.OnSignal}" Margin="0,0,2,0" />
+                    <Rectangle Width="2" Height="8" RadiusX="1" RadiusY="1" Fill="{DynamicResource H.OnSignal}" Margin="0,0,2,0" />
+                    <Rectangle Width="2" Height="4" RadiusX="1" RadiusY="1" Fill="{DynamicResource H.OnSignal}" />
                 </StackPanel>
+            </Border>
+        </ControlTemplate>
 
-                <ItemsControl x:Name="MessageList" ItemsSource="{Binding Messages}" Margin="24,18" MaxWidth="820" Focusable="False">
-                    <ItemsControl.Resources>
-                        <DataTemplate DataType="{x:Type vm:UserMessageVm}">
-                            <Border HorizontalAlignment="Right" MaxWidth="600" Margin="60,8,0,8" Padding="14,9" CornerRadius="12,12,3,12"
-                                    Background="{DynamicResource AccentFillColorDefaultBrush}">
-                                <StackPanel>
-                                    <ItemsControl ItemsSource="{Binding Attachments}" Focusable="False" Margin="0,2,0,6"
-                                                  Visibility="{Binding HasAttachments, Converter={StaticResource BoolToVisibility}}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Button Command="{Binding OpenCommand}" Padding="0" Margin="0,0,6,6" Cursor="Hand"
-                                                        ToolTip="{Binding Path}" AutomationProperties.Name="{Binding Name}">
-                                                    <Grid>
-                                                        <Image Source="{Binding Thumbnail}" MaxHeight="150" MaxWidth="320" Stretch="Uniform"
-                                                               Visibility="{Binding ShowAsImage, Converter={StaticResource BoolToVisibility}}" />
-                                                        <StackPanel Orientation="Horizontal" Margin="10,6"
-                                                                    Visibility="{Binding ShowAsImage, Converter={StaticResource BoolToVisibility}, ConverterParameter=invert}">
-                                                            <TextBlock Style="{StaticResource Icon}" FontSize="13" Text="&#xE7C3;" Margin="0,0,8,0" />
-                                                            <TextBlock Text="{Binding Name}" FontSize="12.5" />
-                                                        </StackPanel>
-                                                    </Grid>
-                                                </Button>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                    <TextBox Style="{StaticResource SelectableText}" Text="{Binding Text, Mode=OneWay}"
-                                             Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
+        <!-- A file chip: used for attachments in a message and in the message box. -->
+        <DataTemplate x:Key="AttachmentChip" DataType="{x:Type vm:AttachmentVm}">
+            <Button Command="{Binding OpenCommand}" Style="{StaticResource H.RowButton}" Padding="0" Margin="0,0,6,6"
+                    ToolTip="{Binding Path}" AutomationProperties.Name="{Binding Name}">
+                <Grid>
+                    <Border CornerRadius="10" Visibility="{Binding ShowAsImage, Converter={StaticResource BoolToVisibility}}">
+                        <Image Source="{Binding Thumbnail}" MaxHeight="150" MaxWidth="320" Stretch="Uniform" />
+                    </Border>
+                    <Border CornerRadius="8" Padding="9,4" BorderThickness="1" BorderBrush="{DynamicResource H.Line}" Background="{DynamicResource H.Surface}"
+                            Visibility="{Binding ShowAsImage, Converter={StaticResource BoolToVisibility}, ConverterParameter=invert}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Icon}" FontSize="12" Text="&#xE7C3;" Margin="0,0,7,0" Foreground="{DynamicResource H.Ink2}" />
+                            <TextBlock Text="{Binding Name}" FontSize="12.5" Foreground="{DynamicResource H.Ink2}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Button>
+        </DataTemplate>
 
-                        <DataTemplate DataType="{x:Type vm:AssistantMessageVm}">
-                            <ctl:MarkdownView Markdown="{Binding Text, Mode=OneWay}" Margin="0,8,40,8" />
-                        </DataTemplate>
+        <!-- Send, which squares off into Stop while Hark is working. -->
+        <Style x:Key="SendButton" TargetType="Button">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource H.OnSignal}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid x:Name="Root" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform><ScaleTransform x:Name="Press" /></Grid.RenderTransform>
+                            <Ellipse x:Name="Round" Fill="{DynamicResource H.Signal}" />
+                            <Border x:Name="Square" CornerRadius="11" Background="{DynamicResource H.Signal}" Opacity="0" />
+                            <Ellipse x:Name="FocusRing" Stroke="{DynamicResource H.Ink}" StrokeThickness="2" Margin="-3" Visibility="Collapsed" />
+                            <TextBlock x:Name="Arrow" FontFamily="{StaticResource IconFont}" FontSize="15" Text="&#xE74A;"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Rectangle x:Name="Stop" Width="11" Height="11" RadiusX="2.5" RadiusY="2.5" Fill="{DynamicResource H.OnSignal}" Opacity="0" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Square" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.3" />
+                                            <DoubleAnimation Storyboard.TargetName="Round" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.3" />
+                                            <DoubleAnimation Storyboard.TargetName="Stop" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2" />
+                                            <DoubleAnimation Storyboard.TargetName="Arrow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Square" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.3" />
+                                            <DoubleAnimation Storyboard.TargetName="Round" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.3" />
+                                            <DoubleAnimation Storyboard.TargetName="Stop" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15" />
+                                            <DoubleAnimation Storyboard.TargetName="Arrow" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.ExitActions>
+                            </DataTrigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard><Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleX" To="0.92" Duration="0:0:0.08" />
+                                        <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleY" To="0.92" Duration="0:0:0.08" />
+                                    </Storyboard></BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard><Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.2" />
+                                        <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.2" />
+                                    </Storyboard></BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="FocusRing" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
 
-                        <DataTemplate DataType="{x:Type vm:ToolCallVm}">
-                            <Border Margin="0,4" Padding="10,6" CornerRadius="6" HorizontalAlignment="Left"
-                                    BorderThickness="1" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Style="{StaticResource Icon}" FontSize="13" Text="&#xE90F;" Margin="0,0,8,0"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12.5" />
-                                        <TextBlock Text="{Binding Status}" Style="{StaticResource Secondary}" Margin="10,0,0,0" />
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding Error}" Margin="21,4,0,0" FontSize="12.5" TextWrapping="Wrap" MaxWidth="640"
-                                               Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                                               Visibility="{Binding Error, Converter={StaticResource TextToVisibility}}" />
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
+    <Grid Background="Transparent">
+        <!-- ============ conversation ============ -->
+        <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+            <ItemsControl x:Name="MessageList" ItemsSource="{Binding Messages}" Margin="24,8,24,170" MaxWidth="740" Focusable="False">
+                <ItemsControl.ItemContainerStyle>
+                    <Style TargetType="ContentPresenter">
+                        <Setter Property="ctl:Motion.EnterOnLoad" Value="True" />
+                        <Setter Property="Margin" Value="0,0,0,20" />
+                    </Style>
+                </ItemsControl.ItemContainerStyle>
+                <ItemsControl.Resources>
 
-                        <DataTemplate DataType="{x:Type vm:ApprovalVm}">
-                            <Border Style="{StaticResource Card}" Margin="0,8">
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                    <ScrollViewer MaxHeight="160" Margin="0,8,0,0" VerticalScrollBarVisibility="Auto"
-                                                  Visibility="{Binding Detail, Converter={StaticResource TextToVisibility}}">
-                                        <TextBox Style="{StaticResource SelectableText}" Text="{Binding Detail, Mode=OneWay}"
-                                                 FontFamily="{StaticResource MonoFont}" FontSize="12.5"
-                                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                    </ScrollViewer>
-                                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0"
-                                                Visibility="{Binding IsPending, Converter={StaticResource BoolToVisibility}}">
-                                        <Button Content="Allow once" Command="{Binding AllowOnceCommand}" Style="{DynamicResource AccentButtonStyle}" Padding="14,6" />
-                                        <Button Content="{Binding AlwaysLabel}" Command="{Binding AlwaysAllowCommand}" Margin="8,0,0,0" Padding="14,6" />
-                                        <Button Content="Deny" Command="{Binding DenyCommand}" Margin="8,0,0,0" Padding="14,6" />
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding Outcome}" Style="{StaticResource Secondary}" Margin="0,8,0,0"
-                                               Visibility="{Binding IsPending, Converter={StaticResource BoolToVisibility}, ConverterParameter=invert}" />
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
+                    <DataTemplate DataType="{x:Type vm:UserMessageVm}">
+                        <Border HorizontalAlignment="Right" MaxWidth="560" Padding="15,10" CornerRadius="18,18,6,18" Background="{DynamicResource H.User}">
+                            <StackPanel>
+                                <ItemsControl ItemsSource="{Binding Attachments}" ItemTemplate="{StaticResource AttachmentChip}" Focusable="False" Margin="0,2,0,2"
+                                              Visibility="{Binding HasAttachments, Converter={StaticResource BoolToVisibility}}">
+                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                </ItemsControl>
+                                <TextBox Style="{StaticResource SelectableText}" Text="{Binding Text, Mode=OneWay}" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
 
-                        <DataTemplate DataType="{x:Type vm:GeneratedFilesVm}">
-                            <Border Style="{StaticResource Card}" Margin="0,8" HorizontalAlignment="Left">
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" />
-                                    <ItemsControl ItemsSource="{Binding Files}" Focusable="False" Margin="0,8,0,0">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <DockPanel Margin="0,3">
-                                                    <Button DockPanel.Dock="Right" Content="Show in folder" Command="{Binding ShowInFolderCommand}"
-                                                            Padding="10,4" Margin="8,0,0,0" />
-                                                    <Button DockPanel.Dock="Right" Content="Open" Command="{Binding OpenCommand}"
-                                                            Padding="10,4" Margin="16,0,0,0" />
-                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" ToolTip="{Binding Path}">
-                                                        <TextBlock Style="{StaticResource Icon}" FontSize="13" Text="&#xE7C3;" Margin="0,0,8,0"
-                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                                        <TextBlock Text="{Binding Name}" />
-                                                    </StackPanel>
+                    <DataTemplate DataType="{x:Type vm:AssistantMessageVm}">
+                        <StackPanel x:Name="Answer" Background="Transparent">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <ContentControl Template="{StaticResource MiniMark}" Focusable="False" />
+                                <TextBlock Text="{Binding Byline}" FontSize="12.5" Foreground="{DynamicResource H.Ink3}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                            </StackPanel>
+                            <ctl:MarkdownView Markdown="{Binding Text, Mode=OneWay}" Margin="0,0,40,0" />
+                            <StackPanel x:Name="Tools" Orientation="Horizontal" Margin="-6,6,0,0" Opacity="0">
+                                <Button Style="{StaticResource H.Ghost}" Command="{Binding CopyCommand}" Content="{Binding CopyLabel}" />
+                                <Button Style="{StaticResource H.Ghost}" Command="{Binding RetryCommand}" Content="Try again"
+                                        Visibility="{Binding CanRetry, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
+                        </StackPanel>
+                        <DataTemplate.Triggers>
+                            <Trigger SourceName="Answer" Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Tools" Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger SourceName="Answer" Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="Tools" Property="Opacity" Value="1" />
+                            </Trigger>
+                        </DataTemplate.Triggers>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="{x:Type vm:ToolActivityVm}">
+                        <Border Style="{StaticResource Card}" CornerRadius="12">
+                            <StackPanel>
+                                <Button Style="{StaticResource H.RowButton}" Padding="12,9" Command="{Binding ToggleCommand}"
+                                        AutomationProperties.Name="Show the tools that were used">
+                                    <DockPanel>
+                                        <TextBlock x:Name="Chevron" DockPanel.Dock="Right" Style="{StaticResource Icon}" FontSize="11" Text="&#xE70D;"
+                                                   Foreground="{DynamicResource H.Ink3}" RenderTransformOrigin="0.5,0.5">
+                                            <TextBlock.RenderTransform><RotateTransform x:Name="ChevronTurn" /></TextBlock.RenderTransform>
+                                        </TextBlock>
+                                        <Grid DockPanel.Dock="Left" Width="16" Height="16" Margin="0,0,10,0">
+                                            <!-- running: a turning arc -->
+                                            <Ellipse x:Name="Spinner" Stroke="{DynamicResource H.Signal}" StrokeThickness="2" StrokeDashArray="5 20"
+                                                     RenderTransformOrigin="0.5,0.5"
+                                                     Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}">
+                                                <Ellipse.RenderTransform><RotateTransform x:Name="Spin" /></Ellipse.RenderTransform>
+                                                <Ellipse.Triggers>
+                                                    <EventTrigger RoutedEvent="Loaded">
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="Spin" Storyboard.TargetProperty="Angle" From="0" To="360"
+                                                                                 Duration="0:0:0.8" RepeatBehavior="Forever" />
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </EventTrigger>
+                                                </Ellipse.Triggers>
+                                            </Ellipse>
+                                            <!-- done -->
+                                            <Grid Visibility="{Binding IsDone, Converter={StaticResource BoolToVisibility}}">
+                                                <Ellipse Fill="{DynamicResource H.OkSoft}" />
+                                                <TextBlock FontFamily="{StaticResource IconFont}" FontSize="9" Text="&#xE73E;" Foreground="{DynamicResource H.Ok}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Grid>
+                                            <!-- something failed -->
+                                            <Grid Visibility="{Binding HasFailure, Converter={StaticResource BoolToVisibility}}">
+                                                <Ellipse Fill="{DynamicResource H.ErrSoft}" />
+                                                <TextBlock FontFamily="{StaticResource IconFont}" FontSize="9" Text="&#xE711;" Foreground="{DynamicResource H.Err}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Grid>
+                                        <TextBlock Text="{Binding Summary}" FontSize="13.5" TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </Button>
+                                <ItemsControl ItemsSource="{Binding Steps}" Focusable="False" Margin="14,2,14,12"
+                                              Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,6,0,0">
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Took}" FontSize="12.5" Foreground="{DynamicResource H.Ink3}" Margin="12,0,0,0" />
+                                                    <TextBlock Text="{Binding Name}" FontFamily="{StaticResource MonoFont}" FontSize="12.5" TextTrimming="CharacterEllipsis" />
                                                 </DockPanel>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
+                                                <TextBlock Text="{Binding Error}" FontSize="12.5" TextWrapping="Wrap" Margin="0,3,0,0" Foreground="{DynamicResource H.Err}"
+                                                           Visibility="{Binding Error, Converter={StaticResource TextToVisibility}}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                        <DataTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard><Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ChevronTurn" Storyboard.TargetProperty="Angle" To="180" Duration="0:0:0.25" />
+                                    </Storyboard></BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <BeginStoryboard><Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ChevronTurn" Storyboard.TargetProperty="Angle" To="0" Duration="0:0:0.25" />
+                                    </Storyboard></BeginStoryboard>
+                                </DataTrigger.ExitActions>
+                            </DataTrigger>
+                        </DataTemplate.Triggers>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="{x:Type vm:ApprovalVm}">
+                        <Border Style="{StaticResource Card}" CornerRadius="12" Padding="14">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}" FontWeight="Medium" TextWrapping="Wrap" />
+                                <Border Background="{DynamicResource H.Sunken}" CornerRadius="8" Padding="11,9" Margin="0,10,0,0"
+                                        Visibility="{Binding Detail, Converter={StaticResource TextToVisibility}}">
+                                    <ScrollViewer MaxHeight="160" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <TextBox Style="{StaticResource SelectableText}" Text="{Binding Detail, Mode=OneWay}"
+                                                 FontFamily="{StaticResource MonoFont}" FontSize="12.5" Foreground="{DynamicResource H.Ink2}" />
+                                    </ScrollViewer>
+                                </Border>
+                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0" Visibility="{Binding IsPending, Converter={StaticResource BoolToVisibility}}">
+                                    <Button Content="Allow once" Command="{Binding AllowOnceCommand}" Style="{StaticResource H.Primary}" />
+                                    <Button Content="{Binding AlwaysLabel}" Command="{Binding AlwaysAllowCommand}" Style="{StaticResource H.Button}" Margin="8,0,0,0" />
+                                    <Button Content="Deny" Command="{Binding DenyCommand}" Style="{StaticResource H.Button}" Margin="8,0,0,0" />
                                 </StackPanel>
-                            </Border>
-                        </DataTemplate>
+                                <TextBlock Text="{Binding Outcome}" Style="{StaticResource Secondary}" Margin="0,10,0,0"
+                                           Visibility="{Binding IsPending, Converter={StaticResource BoolToVisibility}, ConverterParameter=invert}" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
 
-                        <DataTemplate DataType="{x:Type vm:ErrorVm}">
-                            <TextBox Style="{StaticResource SelectableText}" Text="{Binding Text, Mode=OneWay}" Margin="0,8"
-                                     Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
-                        </DataTemplate>
+                    <DataTemplate DataType="{x:Type vm:GeneratedFilesVm}">
+                        <ItemsControl ItemsSource="{Binding Files}" Focusable="False">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource Card}" CornerRadius="10" Margin="0,0,8,8">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Style="{StaticResource H.RowButton}" Padding="10,8" Command="{Binding OpenCommand}" ToolTip="{Binding Path}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border Width="30" Height="30" CornerRadius="7" Background="{DynamicResource H.SignalSoft}" Margin="0,0,10,0">
+                                                        <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="&#xE7C3;" Foreground="{DynamicResource H.SignalDeep}" HorizontalAlignment="Center" />
+                                                    </Border>
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Name}" FontWeight="Medium" FontSize="13.5" Foreground="{DynamicResource H.Ink}" />
+                                                        <TextBlock Text="Saved. Click to open." FontSize="12" Foreground="{DynamicResource H.Ink3}" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Style="{StaticResource H.IconButton}" Command="{Binding ShowInFolderCommand}" Margin="0,0,6,0"
+                                                    ToolTip="Show in folder" AutomationProperties.Name="Show in folder">
+                                                <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="&#xE8B7;" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DataTemplate>
 
-                        <DataTemplate DataType="{x:Type vm:NoteVm}">
-                            <TextBlock Text="{Binding Text}" Style="{StaticResource Secondary}" Margin="0,8" />
-                        </DataTemplate>
-                    </ItemsControl.Resources>
-                </ItemsControl>
-            </Grid>
+                    <DataTemplate DataType="{x:Type vm:ErrorVm}">
+                        <Border Background="{DynamicResource H.ErrSoft}" CornerRadius="10" Padding="13,9">
+                            <TextBox Style="{StaticResource SelectableText}" Text="{Binding Text, Mode=OneWay}" FontSize="13.5" Foreground="{DynamicResource H.Err}" />
+                        </Border>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="{x:Type vm:NoteVm}">
+                        <TextBlock Text="{Binding Text}" Style="{StaticResource Secondary}" />
+                    </DataTemplate>
+                </ItemsControl.Resources>
+            </ItemsControl>
         </ScrollViewer>
 
-        <!-- Status line -->
-        <TextBlock Grid.Row="2" Text="{Binding Status}" Style="{StaticResource Secondary}" Margin="24,0,24,6"
-                   Visibility="{Binding Status, Converter={StaticResource TextToVisibility}}" />
+        <!-- ============ greeting on an empty chat ============ -->
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24,0,24,150" MaxWidth="640"
+                    Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}">
+            <ctl:Orb Width="64" Height="64" HorizontalAlignment="Center" />
+            <TextBlock Text="What are we working on?" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,22,0,22" />
+            <ItemsControl ItemsSource="{Binding Suggestions}" Focusable="False">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Style="{StaticResource H.Button}" Margin="5" Padding="14,12" HorizontalContentAlignment="Left"
+                                Command="{Binding DataContext.UseSuggestionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}" ctl:Motion.EnterOnLoad="True">
+                            <StackPanel Width="270">
+                                <TextBlock Text="{Binding Title}" FontWeight="Medium" FontSize="14" />
+                                <TextBlock Text="{Binding Detail}" FontSize="13" FontWeight="Normal" Foreground="{DynamicResource H.Ink2}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
 
-        <!-- Composer -->
-        <Border Grid.Row="3" Padding="24,12,24,18" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
-            <DockPanel MaxWidth="820">
-                <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding PendingAttachments}" Focusable="False" Margin="0,0,0,8"
-                              Visibility="{Binding HasPendingAttachments, Converter={StaticResource BoolToVisibility}}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Margin="0,0,6,6" Padding="10,4,4,4" CornerRadius="6" BorderThickness="1" ToolTip="{Binding Path}"
-                                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Style="{StaticResource Icon}" FontSize="13" Text="&#xE7C3;" Margin="0,0,8,0"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock Text="{Binding Name}" FontSize="12.5" VerticalAlignment="Center" MaxWidth="240" TextTrimming="CharacterEllipsis" />
-                                    <Button Margin="6,0,0,0" Padding="6,2" BorderThickness="0" Background="Transparent"
-                                            ToolTip="Remove" AutomationProperties.Name="Remove this attachment"
-                                            Command="{Binding DataContext.RemoveAttachmentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding}">
-                                        <TextBlock Style="{StaticResource Icon}" FontSize="10" Text="&#xE711;" />
+        <!-- The conversation fades out behind the message box. -->
+        <Rectangle VerticalAlignment="Bottom" Height="150" IsHitTestVisible="False">
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
+                    <GradientStop Color="{DynamicResource H.CanvasColor}" Offset="0" />
+                    <GradientStop Color="{DynamicResource H.CanvasColor}" Offset="0.6" />
+                    <GradientStop Color="{DynamicResource H.CanvasClearColor}" Offset="1" />
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+
+        <!-- ============ message box ============ -->
+        <Grid VerticalAlignment="Bottom" Margin="24,0,24,18" MaxWidth="740">
+            <StackPanel>
+                <TextBlock Text="{Binding Status}" Style="{StaticResource Secondary}" Margin="6,0,0,8"
+                           Visibility="{Binding Status, Converter={StaticResource TextToVisibility}}" />
+                <Grid>
+                    <!-- The shadow sits on its own layer so the text above it stays sharp. -->
+                    <Border CornerRadius="18" Background="{DynamicResource H.Raised}">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="34" ShadowDepth="10" Direction="270" Color="{DynamicResource H.ShadowColor}" Opacity="{DynamicResource H.ShadowOpacity}" />
+                        </Border.Effect>
+                    </Border>
+                    <Border x:Name="ComposerFrame" CornerRadius="18" Background="{DynamicResource H.Raised}" BorderThickness="1" Padding="14,10,10,8">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="BorderBrush" Value="{DynamicResource H.Line}" />
+                                <Style.Triggers>
+                                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource H.Signal}" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel>
+                            <ItemsControl ItemsSource="{Binding PendingAttachments}" Focusable="False" Margin="0,0,0,4"
+                                          Visibility="{Binding HasPendingAttachments, Converter={StaticResource BoolToVisibility}}">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,6,6" Padding="9,3,3,3" CornerRadius="8" BorderThickness="1" ToolTip="{Binding Path}"
+                                                BorderBrush="{DynamicResource H.Line}" Background="{DynamicResource H.Surface}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Style="{StaticResource Icon}" FontSize="12" Text="&#xE7C3;" Margin="0,0,7,0" Foreground="{DynamicResource H.Ink2}" />
+                                                <TextBlock Text="{Binding Name}" FontSize="12.5" VerticalAlignment="Center" MaxWidth="240" TextTrimming="CharacterEllipsis"
+                                                           Foreground="{DynamicResource H.Ink2}" />
+                                                <Button Style="{StaticResource H.Ghost}" Margin="4,0,0,0" Padding="5,3" ToolTip="Remove"
+                                                        AutomationProperties.Name="Remove this attachment"
+                                                        Command="{Binding DataContext.RemoveAttachmentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}">
+                                                    <TextBlock Style="{StaticResource Icon}" FontSize="9" Text="&#xE711;" />
+                                                </Button>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Grid>
+                                <TextBlock x:Name="Placeholder" Text="Ask about your repos, work items or data" FontSize="15" Margin="2,4,0,4"
+                                           Foreground="{DynamicResource H.Ink3}" IsHitTestVisible="False" />
+                                <TextBox x:Name="InputBox" Text="{Binding Input, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource SelectableText}" IsReadOnly="False" AcceptsReturn="True" FontSize="15" Padding="0,4"
+                                         MinHeight="28" MaxHeight="140" CaretBrush="{DynamicResource H.Signal}"
+                                         PreviewKeyDown="InputBox_PreviewKeyDown" TextChanged="InputBox_TextChanged" AutomationProperties.Name="Message">
+                                    <TextBox.Template>
+                                        <ControlTemplate TargetType="TextBox">
+                                            <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" />
+                                        </ControlTemplate>
+                                    </TextBox.Template>
+                                </TextBox>
+                            </Grid>
+
+                            <DockPanel Margin="-6,6,0,0">
+                                <Button DockPanel.Dock="Right" Style="{StaticResource SendButton}" Command="{Binding SendOrStopCommand}"
+                                        ToolTip="Send (Enter)" AutomationProperties.Name="Send, or stop while working" />
+                                <Button x:Name="ModelButton" DockPanel.Dock="Right" Style="{StaticResource H.Ghost}" FontSize="13" Margin="0,0,6,0" Padding="9,6"
+                                        Click="ModelButton_Click" ToolTip="Choose the model" AutomationProperties.Name="Model">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding ModelLabel}" />
+                                        <TextBlock Style="{StaticResource Icon}" FontSize="9" Text="&#xE70D;" Margin="7,1,0,0" />
+                                    </StackPanel>
+                                </Button>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                    <Button Style="{StaticResource H.IconButton}" Command="{Binding AttachCommand}"
+                                            ToolTip="Attach files or images. You can also drag them in, or paste an image."
+                                            AutomationProperties.Name="Attach files or images">
+                                        <TextBlock Style="{StaticResource Icon}" Text="&#xE723;" />
+                                    </Button>
+                                    <ToggleButton Style="{StaticResource H.IconToggle}" IsChecked="{Binding IncludeScreen, Mode=TwoWay}"
+                                                  ToolTip="Send a capture of your whole screen with the next message"
+                                                  AutomationProperties.Name="Include my screen with the next message">
+                                        <TextBlock Style="{StaticResource Icon}" Text="&#xE7F4;" />
+                                    </ToggleButton>
+                                    <Button Style="{StaticResource H.IconButton}" Command="{Binding TalkCommand}"
+                                            ToolTip="Talk (Ctrl + Alt + Space)" AutomationProperties.Name="Talk">
+                                        <TextBlock Style="{StaticResource Icon}" Text="&#xE720;" />
                                     </Button>
                                 </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <Button DockPanel.Dock="Right" Margin="10,0,0,0" Padding="16,8" VerticalAlignment="Bottom"
-                        Command="{Binding StopCommand}" Content="Stop"
-                        Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
-                <Button DockPanel.Dock="Right" Margin="10,0,0,0" Padding="16,8" VerticalAlignment="Bottom"
-                        Command="{Binding SendCommand}" Style="{DynamicResource AccentButtonStyle}"
-                        Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}, ConverterParameter=invert}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Style="{StaticResource Icon}" FontSize="13" Text="&#xE724;" Margin="0,0,8,0" />
-                        <TextBlock Text="Send" />
-                    </StackPanel>
-                </Button>
-                <Button DockPanel.Dock="Left" Margin="0,0,6,0" Padding="10,8" VerticalAlignment="Bottom" Command="{Binding AttachCommand}"
-                        ToolTip="Attach files or images. You can also drag them in, or paste an image."
-                        AutomationProperties.Name="Attach files or images">
-                    <TextBlock Style="{StaticResource Icon}" Text="&#xE723;" />
-                </Button>
-                <ToggleButton DockPanel.Dock="Left" Margin="0,0,10,0" Padding="10,8" VerticalAlignment="Bottom"
-                              IsChecked="{Binding IncludeScreen, Mode=TwoWay}"
-                              ToolTip="Send a capture of your whole screen with the next message"
-                              AutomationProperties.Name="Include my screen with the next message">
-                    <TextBlock Style="{StaticResource Icon}" Text="&#xE7F4;" />
-                </ToggleButton>
-                <TextBox x:Name="InputBox" Text="{Binding Input, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         AcceptsReturn="True" TextWrapping="Wrap" MinHeight="38" MaxHeight="150" FontSize="14"
-                         VerticalScrollBarVisibility="Auto" PreviewKeyDown="InputBox_PreviewKeyDown"
-                         AutomationProperties.Name="Message" />
-            </DockPanel>
-        </Border>
+                            </DockPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>

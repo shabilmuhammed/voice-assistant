@@ -73,6 +73,10 @@ jobs:
           Shot "chat-capture" 0 $false "--demo-capture"
           Shot "chat-approvals" 0 $false "--demo-approvals"
           Shot "chat-approvals-dark" 0 $true "--demo-approvals"
+          Shot "chat-empty" 0 $false "--demo-empty"
+          Shot "chat-empty-dark" 0 $true "--demo-empty"
+          Shot "history-dark" 1 $true
+          Shot "settings-dark" 3 $true
           Shot "voice-listening" 1 $false @("--demo-voice","listening")
           Shot "voice-working" 1 $false @("--demo-voice","working")
           Shot "voice-answer" 1 $true @("--demo-voice","answer")
@@ -82,6 +86,13 @@ jobs:
           Shot "chat-dark" 0 $true
           Shot "connections-dark" 2 $true
           Get-ChildItem shots
+
+      - name: Show the app log from the screenshot runs
+        if: always()
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:LOCALAPPDATA "Hark\hark.log"
+          if (Test-Path $log) { Get-Content $log -Tail 120 } else { "No log file." }
 
       - name: Publish screenshots to the ci-screenshots branch
         shell: pwsh

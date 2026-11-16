@@ -33,6 +33,12 @@ public partial class App : Application
 
         Log.Info($"Hark starting, {Environment.OSVersion}, .NET {Environment.Version}");
 
+        ApplyPalette();
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged += (_, args) =>
+        {
+            if (args.Category == Microsoft.Win32.UserPreferenceCategory.General) Dispatcher.BeginInvoke(ApplyPalette);
+        };
+
         _main = new MainViewModel();
         _window = new MainWindow { DataContext = _main };
         _window.Closing += (_, args) =>
@@ -50,6 +56,7 @@ public partial class App : Application
 
         // "--demo" fills the screens with sample data and talks to nothing; used for automated screenshots.
         var demo = e.Args.Contains("--demo");
+        _demoMode = demo;
         _main.CaptureScreen = () => ScreenCapture.CaptureAsync(_window);
         _overlay = new VoiceOverlay(_main.Voice);
         if (!demo) CreateTray();
@@ -57,6 +64,11 @@ public partial class App : Application
         if (demo)
         {
             _main.LoadDemo(PageArg(e.Args), approvals: e.Args.Contains("--demo-approvals"));
+            if (e.Args.Contains("--demo-empty"))
+            {
+                _main.Chat.Messages.Clear();
+                _main.Chat.Title = "New chat";
+            }
             if (e.Args.Contains("--demo-capture")) _ = DemoCaptureAsync();
             var voiceDemo = Array.IndexOf(e.Args, "--demo-voice");
             if (voiceDemo >= 0 && voiceDemo + 1 < e.Args.Length) _main.Voice.LoadDemo(e.Args[voiceDemo + 1]);
@@ -83,6 +95,37 @@ public partial class App : Application
     {
         var shot = await ScreenCapture.CaptureAsync(_window);
         if (shot is not null) _main?.Chat.AddDemoImage(shot.Path);
+    }
+
+    private bool? _darkApplied;
+    private bool _demoMode;
+
+    /// <summary>Loads the light or dark colour palette to match the Windows app theme.</summary>
+    private void ApplyPalette()
+    {
+        var dark = false;
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+            dark = key?.GetValue("AppsUseLightTheme") is int light && light == 0;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Reading the Windows theme failed; using the light palette.", ex);
+        }
+        if (_darkApplied == dark) return;
+        _darkApplied = dark;
+        try
+        {
+            Resources.MergedDictionaries[0] = new ResourceDictionary
+            {
+                Source = new Uri(dark ? "Theme/Dark.xaml" : "Theme/Light.xaml", UriKind.Relative),
+            };
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Applying the colour palette failed", ex);
+        }
     }
 
     private static int PageArg(string[] args)
@@ -179,6 +222,11 @@ public partial class App : Application
     private void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         Log.Error("Unhandled UI exception", e.Exception);
+        if (_demoMode)
+        {
+            e.Handled = true;
+            return;
+        }
         MessageBox.Show(
             $"Something went wrong:\n\n{e.Exception.Message}\n\nDetails were saved to:\n{AppPaths.LogFile}",
             "Hark", MessageBoxButton.OK, MessageBoxImage.Warning);

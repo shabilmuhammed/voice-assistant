@@ -4,7 +4,8 @@
         xmlns:ctl="clr-namespace:Hark.App.Controls"
         Title="Hark voice" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" ShowActivated="False" Topmost="True" ResizeMode="NoResize"
-        SizeToContent="Height" Width="560" Focusable="False">
+        SizeToContent="Height" Width="560" Focusable="False"
+        FontFamily="{StaticResource UiFont}" TextOptions.TextFormattingMode="Ideal">
     <Window.Resources>
         <!-- The overlay keeps one dark look in both Windows themes, so it reads the same over any app. -->
         <SolidColorBrush x:Key="OverlaySurface" Color="#F21B2128" />
@@ -33,7 +34,7 @@
         </Style>
     </Window.Resources>
 
-    <Border Margin="24" CornerRadius="22" Background="{StaticResource OverlaySurface}"
+    <Border Margin="24" CornerRadius="26" Background="{StaticResource OverlaySurface}"
             BorderBrush="{StaticResource OverlayStroke}" BorderThickness="1" Padding="18,16">
         <Border.Effect>
             <DropShadowEffect BlurRadius="28" ShadowDepth="6" Direction="270" Opacity="0.45" Color="Black" />
@@ -50,16 +51,9 @@
                 <Ellipse x:Name="Halo" Fill="{StaticResource OverlayGlow}" Opacity="0.28" RenderTransformOrigin="0.5,0.5">
                     <Ellipse.RenderTransform><ScaleTransform x:Name="HaloScale" ScaleX="0.7" ScaleY="0.7" /></Ellipse.RenderTransform>
                 </Ellipse>
-                <Ellipse x:Name="Core" Width="34" Height="34" RenderTransformOrigin="0.5,0.5">
-                    <Ellipse.Fill>
-                        <RadialGradientBrush GradientOrigin="0.35,0.3">
-                            <GradientStop Color="#C9F1FF" Offset="0" />
-                            <GradientStop Color="#5CC4E8" Offset="0.45" />
-                            <GradientStop Color="#0A6A8F" Offset="1" />
-                        </RadialGradientBrush>
-                    </Ellipse.Fill>
-                    <Ellipse.RenderTransform><ScaleTransform x:Name="CoreScale" /></Ellipse.RenderTransform>
-                </Ellipse>
+                <ctl:Orb x:Name="Core" Width="36" Height="36" RenderTransformOrigin="0.5,0.5" Lively="{Binding IsListening}">
+                    <ctl:Orb.RenderTransform><ScaleTransform x:Name="CoreScale" /></ctl:Orb.RenderTransform>
+                </ctl:Orb>
             </Grid>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center">

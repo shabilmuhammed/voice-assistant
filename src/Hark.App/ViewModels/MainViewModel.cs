@@ -1,4 +1,6 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using GitHub.Copilot;
 using Hark.Core;
 
@@ -25,6 +27,10 @@ public sealed partial class MainViewModel : ObservableObject
         Voice = new VoiceViewModel(this);
         Preferences = new SettingsViewModel(this);
         _currentPage = Chat;
+        Chat.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ChatViewModel.Title)) UpdatePageTitle();
+        };
     }
 
     public AppSettings Settings { get; }
@@ -41,6 +47,51 @@ public sealed partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private object _currentPage;
+
+    /// <summary>Recent chats for the sidebar: day headings interleaved with chats.</summary>
+    public ObservableCollection<object> Recents { get; } = new();
+
+    /// <summary>Shown in the top bar: the chat's title, or the page name.</summary>
+    [ObservableProperty]
+    private string _pageTitle = "New chat";
+
+    [ObservableProperty]
+    private string _toolsStatus = "";
+
+    public void RefreshRecents()
+    {
+        if (_demo) return;
+        try
+        {
+            Recents.Clear();
+            foreach (var item in ChatGroups.Build(Store.ListConversations().Take(30), Chat.CurrentConversationId)) Recents.Add(item);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Loading recent chats failed", ex);
+        }
+    }
+
+    private void UpdatePageTitle() => PageTitle = SelectedNavIndex switch
+    {
+        1 => "History",
+        2 => "Connections",
+        3 => "Settings",
+        _ => Chat.Title,
+    };
+
+    private void UpdateToolsStatus()
+    {
+        var count = Connections.Servers.Count(s => s.Enabled);
+        ToolsStatus = count == 0 ? "No tool servers" : count == 1 ? "1 tool server" : $"{count} tool servers";
+    }
+
+    [RelayCommand]
+    private void SearchChats()
+    {
+        SelectedNavIndex = 1;
+        History.FocusSearch();
+    }
 
     /// <summary>0 Chat, 1 History, 2 Connections, 3 Settings.</summary>
     [ObservableProperty]
@@ -69,9 +120,10 @@ public sealed partial class MainViewModel : ObservableObject
             3 => Preferences,
             _ => Chat,
         };
+        UpdatePageTitle();
         if (_demo) return;
         if (value == 1) History.Refresh();
-        if (value == 2) Connections.Reload();
+        if (value == 2) { Connections.Reload(); UpdateToolsStatus(); }
     }
 
     public void ShowChat() => SelectedNavIndex = 0;
@@ -80,6 +132,8 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Voice.ApplySettings();
         Connections.Reload();
+        UpdateToolsStatus();
+        RefreshRecents();
         if (string.IsNullOrWhiteSpace(Settings.GitHubPat))
         {
             ConnectionStatus = "Add your GitHub PAT to get started";
@@ -143,6 +197,9 @@ public sealed partial class MainViewModel : ObservableObject
         Chat.LoadDemo(approvals);
         History.LoadDemo();
         Connections.LoadDemo();
+        UpdateToolsStatus();
+        foreach (var item in History.Items) Recents.Add(item);
+        UpdatePageTitle();
         SelectedNavIndex = page;
     }
 

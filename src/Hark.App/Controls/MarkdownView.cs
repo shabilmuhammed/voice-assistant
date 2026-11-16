@@ -30,7 +30,7 @@ public sealed class MarkdownView : RichTextBox
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
         .UsePipeTables().UseAutoLinks().UseEmphasisExtras().UseTaskLists().Build();
 
-    private static readonly FontFamily Mono = new("Cascadia Code, Consolas");
+    private static FontFamily Mono => Application.Current?.TryFindResource("MonoFont") as FontFamily ?? new FontFamily("Cascadia Code, Consolas");
 
     public static readonly DependencyProperty MarkdownProperty = DependencyProperty.Register(
         nameof(Markdown), typeof(string), typeof(MarkdownView),
@@ -116,7 +116,7 @@ public sealed class MarkdownView : RichTextBox
                 var heading = new Paragraph
                 {
                     FontWeight = FontWeights.SemiBold,
-                    FontSize = h.Level switch { 1 => 20, 2 => 17, 3 => 15.5, _ => 14 },
+                    FontSize = h.Level switch { 1 => 20, 2 => 17, 3 => 15.5, _ => 14.5 },
                     Margin = new Thickness(0, 12, 0, 6),
                 };
                 AddInlines(heading.Inlines, h.Inline);
@@ -130,7 +130,7 @@ public sealed class MarkdownView : RichTextBox
                 break;
 
             case FencedCodeBlock or CodeBlock:
-                target.Add(Code(((LeafBlock)block).Lines.ToString()));
+                target.Add(Code(((LeafBlock)block).Lines.ToString(), (block as FencedCodeBlock)?.Info));
                 break;
 
             case ListBlock list:
@@ -153,8 +153,8 @@ public sealed class MarkdownView : RichTextBox
 
             case QuoteBlock quote:
                 var section = new Section { Padding = new Thickness(12, 0, 0, 0), BorderThickness = new Thickness(2, 0, 0, 0), Margin = new Thickness(0, 0, 0, 10) };
-                section.SetResourceReference(Section.BorderBrushProperty, "ControlStrongStrokeColorDefaultBrush");
-                section.SetResourceReference(TextElement.ForegroundProperty, "TextFillColorSecondaryBrush");
+                section.SetResourceReference(Section.BorderBrushProperty, "H.Line");
+                section.SetResourceReference(TextElement.ForegroundProperty, "H.Ink2");
                 foreach (var child in quote) Append(section.Blocks, child);
                 target.Add(section);
                 break;
@@ -165,7 +165,7 @@ public sealed class MarkdownView : RichTextBox
 
             case ThematicBreakBlock:
                 var rule = new Paragraph { Margin = new Thickness(0, 4, 0, 12), FontSize = 1, BorderThickness = new Thickness(0, 1, 0, 0) };
-                rule.SetResourceReference(WpfBlock.BorderBrushProperty, "CardStrokeColorDefaultBrush");
+                rule.SetResourceReference(WpfBlock.BorderBrushProperty, "H.Line");
                 target.Add(rule);
                 break;
 
@@ -179,26 +179,73 @@ public sealed class MarkdownView : RichTextBox
         }
     }
 
-    private static Paragraph Code(string code)
+    /// <summary>A code block: a header with the language and a Copy button, then the code, which scrolls sideways.</summary>
+    private static WpfBlock Code(string code, string? language)
     {
-        var paragraph = new Paragraph(new Run(code.TrimEnd('\r', '\n')))
+        code = code.TrimEnd('\r', '\n');
+
+        var label = new TextBlock { Text = string.IsNullOrWhiteSpace(language) ? "code" : language.Trim(), FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center };
+        label.SetResourceReference(TextBlock.ForegroundProperty, "H.Ink2");
+
+        var copy = new Button { Content = "Copy" };
+        copy.SetResourceReference(StyleProperty, "H.Ghost");
+        copy.Click += async (_, _) =>
         {
-            FontFamily = Mono,
-            FontSize = 12.5,
-            Padding = new Thickness(12, 10, 12, 10),
-            Margin = new Thickness(0, 2, 0, 12),
-            BorderThickness = new Thickness(1),
-            TextAlignment = TextAlignment.Left,
+            try
+            {
+                Clipboard.SetText(code);
+                copy.Content = "Copied";
+                await Task.Delay(1400);
+                copy.Content = "Copy";
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Copying code failed", ex);
+            }
         };
-        paragraph.SetResourceReference(WpfBlock.BackgroundProperty, "SubtleFillColorSecondaryBrush");
-        paragraph.SetResourceReference(WpfBlock.BorderBrushProperty, "CardStrokeColorDefaultBrush");
-        return paragraph;
+
+        var header = new DockPanel { LastChildFill = true };
+        DockPanel.SetDock(copy, Dock.Right);
+        header.Children.Add(copy);
+        header.Children.Add(label);
+        var headerBar = new Border { Padding = new Thickness(12, 4, 6, 4), CornerRadius = new CornerRadius(9, 9, 0, 0), Child = header };
+        headerBar.SetResourceReference(Border.BackgroundProperty, "H.Sunken");
+
+        var text = new TextBox
+        {
+            Text = code,
+            IsReadOnly = true,
+            BorderThickness = new Thickness(0),
+            Background = Brushes.Transparent,
+            FontFamily = Mono,
+            FontSize = 12.8,
+            Padding = new Thickness(12, 10, 12, 12),
+            TextWrapping = TextWrapping.NoWrap,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            AcceptsReturn = true,
+        };
+        text.SetResourceReference(ForegroundProperty, "H.Ink");
+        text.SetResourceReference(StyleProperty, "SelectableText");
+        text.TextWrapping = TextWrapping.NoWrap;
+        text.FontSize = 12.8;
+        text.FontFamily = Mono;
+        text.Padding = new Thickness(12, 10, 12, 12);
+
+        var stack = new StackPanel();
+        stack.Children.Add(headerBar);
+        stack.Children.Add(text);
+        var frame = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Child = stack };
+        frame.SetResourceReference(Border.BorderBrushProperty, "H.Line");
+        frame.SetResourceReference(Border.BackgroundProperty, "H.Surface");
+
+        return new BlockUIContainer(frame) { Margin = new Thickness(0, 2, 0, 12) };
     }
 
     private WpfTable Table(Markdig.Extensions.Tables.Table source)
     {
         var table = new WpfTable { CellSpacing = 0, Margin = new Thickness(0, 2, 0, 12), BorderThickness = new Thickness(1, 1, 0, 0) };
-        table.SetResourceReference(WpfBlock.BorderBrushProperty, "CardStrokeColorDefaultBrush");
+        table.SetResourceReference(WpfBlock.BorderBrushProperty, "H.Line");
         var columns = source.OfType<Markdig.Extensions.Tables.TableRow>().Select(r => r.Count).DefaultIfEmpty(0).Max();
         for (var i = 0; i < columns; i++) table.Columns.Add(new TableColumn());
 
@@ -209,12 +256,12 @@ public sealed class MarkdownView : RichTextBox
             if (sourceRow.IsHeader)
             {
                 row.FontWeight = FontWeights.SemiBold;
-                row.SetResourceReference(TextElement.BackgroundProperty, "SubtleFillColorSecondaryBrush");
+                row.SetResourceReference(TextElement.BackgroundProperty, "H.Sunken");
             }
             foreach (var sourceCell in sourceRow.OfType<Markdig.Extensions.Tables.TableCell>())
             {
                 var cell = new WpfTableCell { Padding = new Thickness(9, 5, 9, 5), BorderThickness = new Thickness(0, 0, 1, 1) };
-                cell.SetResourceReference(WpfTableCell.BorderBrushProperty, "CardStrokeColorDefaultBrush");
+                cell.SetResourceReference(WpfTableCell.BorderBrushProperty, "H.Line");
                 foreach (var child in sourceCell) Append(cell.Blocks, child);
                 foreach (var child in cell.Blocks) child.Margin = new Thickness(0);
                 if (cell.Blocks.Count == 0) cell.Blocks.Add(new Paragraph());
@@ -243,8 +290,8 @@ public sealed class MarkdownView : RichTextBox
                 break;
 
             case CodeInline code:
-                var run = new Run(code.Content) { FontFamily = Mono, FontSize = 12.5 };
-                run.SetResourceReference(TextElement.BackgroundProperty, "SubtleFillColorSecondaryBrush");
+                var run = new Run(code.Content) { FontFamily = Mono, FontSize = 12.8 };
+                run.SetResourceReference(TextElement.BackgroundProperty, "H.Sunken");
                 target.Add(run);
                 break;
 
@@ -263,7 +310,7 @@ public sealed class MarkdownView : RichTextBox
                 var hyperlink = new Hyperlink();
                 if (Uri.TryCreate(link.Url, UriKind.Absolute, out var uri)) hyperlink.NavigateUri = uri;
                 hyperlink.ToolTip = link.Url;
-                hyperlink.SetResourceReference(TextElement.ForegroundProperty, "AccentTextFillColorPrimaryBrush");
+                hyperlink.SetResourceReference(TextElement.ForegroundProperty, "H.Signal");
                 AddInlines(hyperlink.Inlines, link);
                 if (hyperlink.Inlines.Count == 0) hyperlink.Inlines.Add(new Run(link.Url ?? ""));
                 target.Add(hyperlink);
@@ -276,7 +323,7 @@ public sealed class MarkdownView : RichTextBox
             case AutolinkInline auto:
                 var autoLink = new Hyperlink(new Run(auto.Url)) { ToolTip = auto.Url };
                 if (Uri.TryCreate(auto.Url, UriKind.Absolute, out var autoUri)) autoLink.NavigateUri = autoUri;
-                autoLink.SetResourceReference(TextElement.ForegroundProperty, "AccentTextFillColorPrimaryBrush");
+                autoLink.SetResourceReference(TextElement.ForegroundProperty, "H.Signal");
                 target.Add(autoLink);
                 break;
 

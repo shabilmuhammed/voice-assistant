@@ -6,6 +6,8 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <!-- Index 0 is the colour palette. It is swapped for Dark.xaml when Windows is in dark mode. -->
+                <ResourceDictionary Source="Theme/Light.xaml" />
                 <ResourceDictionary Source="Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>

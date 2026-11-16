@@ -1,4 +1,3 @@
-using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -30,23 +29,40 @@ public partial class ChatView : UserControl
         if (_vm is not null)
         {
             _vm.ScrollRequested -= OnScrollRequested;
-            _vm.Messages.CollectionChanged -= OnMessagesChanged;
+            _vm.FocusRequested -= FocusInput;
         }
         _vm = vm;
         if (_vm is not null)
         {
             _vm.ScrollRequested += OnScrollRequested;
-            _vm.Messages.CollectionChanged += OnMessagesChanged;
+            _vm.FocusRequested += FocusInput;
         }
-        UpdateEmptyState();
     }
 
-    private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e) => UpdateEmptyState();
-
-    private void UpdateEmptyState() =>
-        EmptyState.Visibility = _vm is null || _vm.Messages.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-
     private void OnScrollRequested() => Scroller.ScrollToEnd();
+
+    private void FocusInput()
+    {
+        InputBox.Focus();
+        InputBox.CaretIndex = InputBox.Text.Length;
+    }
+
+    private void InputBox_TextChanged(object sender, TextChangedEventArgs e) =>
+        Placeholder.Visibility = InputBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>The model picker: a menu of the models the Copilot plan offers.</summary>
+    private void ModelButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm is null || _vm.Models.Count == 0) return;
+        var menu = new ContextMenu { PlacementTarget = ModelButton, Placement = System.Windows.Controls.Primitives.PlacementMode.Top };
+        foreach (var model in _vm.Models)
+        {
+            var item = new MenuItem { Header = model.Name, IsCheckable = true, IsChecked = ReferenceEquals(model, _vm.SelectedModel) };
+            item.Click += (_, _) => _vm.SelectedModel = model;
+            menu.Items.Add(item);
+        }
+        menu.IsOpen = true;
+    }
 
     // ---- attachments by drag and drop, and by paste ---------------------------------
 
@@ -92,6 +108,6 @@ public partial class ChatView : UserControl
         // Enter sends; Shift+Enter adds a new line.
         if (e.Key != Key.Enter || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) return;
         e.Handled = true;
-        if (_vm?.SendCommand.CanExecute(null) == true) _vm.SendCommand.Execute(null);
+        if (_vm is { IsBusy: false } && _vm.SendCommand.CanExecute(null)) _vm.SendCommand.Execute(null);
     }
 }

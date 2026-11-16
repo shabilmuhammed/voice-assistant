@@ -19,7 +19,11 @@ public sealed partial class ChatViewModel : ObservableObject
     private bool _suppressModelChange;
     private bool _serversChecked;
 
-    public ChatViewModel(MainViewModel main) => _main = main;
+    public ChatViewModel(MainViewModel main)
+    {
+        _main = main;
+        Messages.CollectionChanged += (_, _) => IsEmpty = Messages.Count == 0;
+    }
 
     public ObservableCollection<MessageVm> Messages { get; } = new();
     public ObservableCollection<ModelChoice> Models { get; } = new();
@@ -29,11 +33,13 @@ public sealed partial class ChatViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SendCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SendOrStopCommand))]
     private string _input = "";
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SendCommand))]
     [NotifyCanExecuteChangedFor(nameof(StopCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SendOrStopCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -61,6 +67,63 @@ public sealed partial class ChatViewModel : ObservableObject
     private static readonly Regex ScreenPhrase = new(
         @"\b(my|the|this) screen\b|\bon[- ]screen\b|\bthis code\b|\bwhat('?s| is) (going on|happening) (here|in this)\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    public sealed record Suggestion(string Title, string Detail, string Prompt);
+
+    /// <summary>Starting points shown on an empty chat.</summary>
+    public IReadOnlyList<Suggestion> Suggestions { get; } =
+    [
+        new("What is open this sprint?", "Searches Azure DevOps work items", "What is still open this sprint?"),
+        new("Where does this table come from?", "Traces lineage in Purview", "Where does this table come from? Table: "),
+        new("Start work on a repo", "Pulls, branches and edits in your repos folder", "Start work on the repo "),
+        new("What is on my screen?", "Sends a capture of your desktop", "What is on my screen?"),
+    ];
+
+    /// <summary>True while the chat has no messages, so the greeting is shown.</summary>
+    [ObservableProperty]
+    private bool _isEmpty = true;
+
+    public string ModelLabel => SelectedModel?.Name ?? "Model";
+
+    /// <summary>Raised when the message box should take the keyboard focus.</summary>
+    public event Action? FocusRequested;
+
+    [RelayCommand]
+    private void UseSuggestion(Suggestion? suggestion)
+    {
+        if (suggestion is null) return;
+        Input = suggestion.Prompt;
+        FocusRequested?.Invoke();
+    }
+
+    /// <summary>The round button: sends, or stops while Hark is working.</summary>
+    private bool CanSendOrStop() => IsBusy || CanSend();
+
+    [RelayCommand(CanExecute = nameof(CanSendOrStop))]
+    private async Task SendOrStopAsync()
+    {
+        if (IsBusy) await StopAsync();
+        else if (CanSend()) await SendAsync();
+    }
+
+    [RelayCommand]
+    private void SelectModel(ModelChoice? model)
+    {
+        if (model is not null) SelectedModel = model;
+    }
+
+    [RelayCommand]
+    private void Talk() => _main.Voice.Toggle();
+
+    private void Retry(AssistantMessageVm answer)
+    {
+        if (IsBusy) return;
+        var index = Messages.IndexOf(answer);
+        var question = Messages.Take(Math.Max(index, 0)).OfType<UserMessageVm>().LastOrDefault();
+        if (question is null) return;
+        Input = question.Text;
+        if (SendCommand.CanExecute(null)) SendCommand.Execute(null);
+    }
 
     /// <summary>The answer being written, in full, each time it changes.</summary>
     public event Action<string>? AssistantTextChanged;
@@ -92,6 +155,7 @@ public sealed partial class ChatViewModel : ObservableObject
 
     partial void OnSelectedModelChanged(ModelChoice? value)
     {
+        OnPropertyChanged(nameof(ModelLabel));
         if (_suppressModelChange || value is null) return;
         _ = ChangeModelAsync(value);
     }
@@ -159,6 +223,7 @@ public sealed partial class ChatViewModel : ObservableObject
             {
                 Title = prompt.Length > 60 ? prompt[..60].TrimEnd() + "…" : prompt;
                 _conversationId = _main.Store.CreateConversation(Title, SelectedModel?.Id);
+                _main.RefreshRecents();
             }
             foreach (var file in files)
                 _main.Store.AddMessage(_conversationId.Value, new AttachmentVm(file).IsImage ? "image" : "file", file);
@@ -299,6 +364,7 @@ public sealed partial class ChatViewModel : ObservableObject
         Status = "";
         IsBusy = false;
         _main.ShowChat();
+        _main.RefreshRecents();
     }
 
     /// <summary>Loads a saved chat. Its Copilot session is resumed on the next message.</summary>
@@ -331,12 +397,13 @@ public sealed partial class ChatViewModel : ObservableObject
                     Messages.Add(new UserMessageVm(m.Content, pendingFiles.ToList()));
                     pendingFiles.Clear();
                     break;
-                case "assistant": Messages.Add(new AssistantMessageVm("", m.Content)); break;
+                case "assistant": Messages.Add(new AssistantMessageVm("", m.Content, null, Retry)); break;
                 case "error": Messages.Add(new ErrorVm(m.Content)); break;
                 case "tool":
                     var parts = m.Content.Split('|', 2);
                     var ok = parts.Length < 2 || parts[1] == "ok";
-                    Messages.Add(new ToolCallVm("", parts[0]) { IsRunning = false, Status = ok ? "Done" : "Failed" });
+                    if (Messages.LastOrDefault() is not ToolActivityVm activity) Messages.Add(activity = new ToolActivityVm());
+                    activity.AddFinished(parts[0], ok);
                     break;
             }
         }
@@ -369,7 +436,10 @@ public sealed partial class ChatViewModel : ObservableObject
     {
         Title = "Ingestion pipeline: sprint status";
         Messages.Add(new UserMessageVm("What is still open on the ingestion pipeline repo this sprint?"));
-        Messages.Add(new ToolCallVm("1", "martechchat: search_work_items") { IsRunning = false, Status = "Done" });
+        var used = new ToolActivityVm();
+        Messages.Add(used);
+        used.Finish(used.Start("1", "martechchat: search_work_items"), true, null);
+        used.Finish(used.Start("2", "martechchat: get_work_item"), true, null);
         if (!approvals)
         {
         Messages.Add(new AssistantMessageVm("a", """
@@ -391,16 +461,18 @@ public sealed partial class ChatViewModel : ObservableObject
 
             1. Guard against an empty schema.
             2. Add a test with a zero-row file.
-            """));
+            """, "Claude Sonnet 5.5", Retry));
             return;
         }
-        Messages.Add(new AssistantMessageVm("a", "Three items are still open in **Sprint 42**."));
+        Messages.Add(new AssistantMessageVm("a", "Three items are still open in **Sprint 42**.", "Claude Sonnet 5.5", Retry));
         Messages.Add(new UserMessageVm("File a bug for the retry gap and assign it to me."));
         Messages.Add(new ApprovalVm(new ToolApprovalRequest("demo", "martechchat: create_bug",
             "{\n  \"title\": \"Blob trigger has no retry policy\",\n  \"assignedTo\": \"me\"\n}", false), _ => { }));
         Messages.Add(new ApprovalVm(new ToolApprovalRequest("shell", "this command to run on your PC",
             "git checkout -b fix/blob-trigger-retry", false, ToolKind.Shell, "git checkout -b fix/blob-trigger-retry"), _ => { }));
-        Messages.Add(new ToolCallVm("2", "martechchat: get_work_item") { IsRunning = false, Status = "Failed", Error = "Work item 9999 was not found." });
+        var failed = new ToolActivityVm();
+        Messages.Add(failed);
+        failed.Finish(failed.Start("3", "martechchat: get_work_item"), false, "Work item 9999 was not found.");
         Messages.Add(new ErrorVm("Copilot could not be reached. Check your network connection and try again."));
         Status = "Waiting for your answer…";
     }
@@ -442,19 +514,20 @@ public sealed partial class ChatViewModel : ObservableObject
                 break;
 
             case ToolStarted t:
-                Add(new ToolCallVm(t.CallId, t.Name));
-                Status = $"Using {t.Name}…";
+                if (Messages.LastOrDefault() is not ToolActivityVm running) Add(running = new ToolActivityVm());
+                running.Start(t.CallId, t.Name);
+                Status = "";
+                ScrollRequested?.Invoke();
                 break;
 
             case ToolFinished t:
-                if (Messages.OfType<ToolCallVm>().LastOrDefault(x => x.CallId == t.CallId && x.IsRunning) is { } call)
+                foreach (var group in Messages.OfType<ToolActivityVm>().Reverse())
                 {
-                    call.IsRunning = false;
-                    call.Status = t.Ok ? "Done" : "Failed";
-                    call.Error = t.Ok ? "" : t.Error ?? "";
-                    Persist("tool", $"{call.Name}|{(t.Ok ? "ok" : "failed")}");
+                    if (group.Steps.LastOrDefault(x => x.CallId == t.CallId && x.IsRunning) is not { } step) continue;
+                    group.Finish(step, t.Ok, t.Error);
+                    Persist("tool", $"{step.Name}|{(t.Ok ? "ok" : "failed")}");
+                    break;
                 }
-                Status = "Working…";
                 break;
 
             case TurnError e:
@@ -488,7 +561,7 @@ public sealed partial class ChatViewModel : ObservableObject
     {
         if (Messages.OfType<AssistantMessageVm>().LastOrDefault(m => m.MessageId == messageId && messageId.Length > 0) is { } existing)
             return existing;
-        var created = new AssistantMessageVm(messageId, "");
+        var created = new AssistantMessageVm(messageId, "", SelectedModel?.Name, Retry);
         Add(created);
         return created;
     }

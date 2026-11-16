@@ -1,0 +1,48 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+    <Color x:Key="H.CanvasColor">#0B1017</Color>
+    <SolidColorBrush x:Key="H.Canvas" Color="#0B1017" />
+    <Color x:Key="H.SurfaceColor">#121922</Color>
+    <SolidColorBrush x:Key="H.Surface" Color="#121922" />
+    <Color x:Key="H.RaisedColor">#18212C</Color>
+    <SolidColorBrush x:Key="H.Raised" Color="#18212C" />
+    <Color x:Key="H.SunkenColor">#0E141C</Color>
+    <SolidColorBrush x:Key="H.Sunken" Color="#0E141C" />
+    <Color x:Key="H.LineColor">#232E3B</Color>
+    <SolidColorBrush x:Key="H.Line" Color="#232E3B" />
+    <Color x:Key="H.InkColor">#E8EEF5</Color>
+    <SolidColorBrush x:Key="H.Ink" Color="#E8EEF5" />
+    <Color x:Key="H.Ink2Color">#9AA8B9</Color>
+    <SolidColorBrush x:Key="H.Ink2" Color="#9AA8B9" />
+    <Color x:Key="H.Ink3Color">#8492A5</Color>
+    <SolidColorBrush x:Key="H.Ink3" Color="#8492A5" />
+    <Color x:Key="H.SignalColor">#52C2EE</Color>
+    <SolidColorBrush x:Key="H.Signal" Color="#52C2EE" />
+    <Color x:Key="H.SignalDeepColor">#8AD7F5</Color>
+    <SolidColorBrush x:Key="H.SignalDeep" Color="#8AD7F5" />
+    <Color x:Key="H.SignalSoftColor">#12303F</Color>
+    <SolidColorBrush x:Key="H.SignalSoft" Color="#12303F" />
+    <Color x:Key="H.OnSignalColor">#04202C</Color>
+    <SolidColorBrush x:Key="H.OnSignal" Color="#04202C" />
+    <Color x:Key="H.UserColor">#1C2734</Color>
+    <SolidColorBrush x:Key="H.User" Color="#1C2734" />
+    <Color x:Key="H.HoverColor">#1B2531</Color>
+    <SolidColorBrush x:Key="H.Hover" Color="#1B2531" />
+    <Color x:Key="H.OkColor">#5FD08D</Color>
+    <SolidColorBrush x:Key="H.Ok" Color="#5FD08D" />
+    <Color x:Key="H.OkSoftColor">#133223</Color>
+    <SolidColorBrush x:Key="H.OkSoft" Color="#133223" />
+    <Color x:Key="H.WarnColor">#F0B455</Color>
+    <SolidColorBrush x:Key="H.Warn" Color="#F0B455" />
+    <Color x:Key="H.WarnSoftColor">#38290C</Color>
+    <SolidColorBrush x:Key="H.WarnSoft" Color="#38290C" />
+    <Color x:Key="H.ErrColor">#FF8A80</Color>
+    <SolidColorBrush x:Key="H.Err" Color="#FF8A80" />
+    <Color x:Key="H.ErrSoftColor">#3F1819</Color>
+    <SolidColorBrush x:Key="H.ErrSoft" Color="#3F1819" />
+    <Color x:Key="H.ShadowColor">#000000</Color>
+    <SolidColorBrush x:Key="H.Shadow" Color="#000000" />
+    <Color x:Key="H.CanvasClearColor">#000B1017</Color>
+    <sys:Double x:Key="H.ShadowOpacity">0.55</sys:Double>
+</ResourceDictionary>

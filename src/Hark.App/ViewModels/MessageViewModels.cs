@@ -64,12 +64,39 @@ public sealed partial class GeneratedFilesVm(IEnumerable<string> paths) : Messag
     public string Heading => Files.Count == 1 ? "Saved 1 file" : $"Saved {Files.Count} files";
 }
 
-public sealed partial class AssistantMessageVm(string messageId, string text) : MessageVm
+public sealed partial class AssistantMessageVm(string messageId, string text, string? model = null, Action<AssistantMessageVm>? retry = null) : MessageVm
 {
     public string MessageId { get; } = messageId;
 
+    /// <summary>"Hark", or "Hark, with Claude Sonnet 5.5" when the model is known.</summary>
+    public string Byline { get; } = string.IsNullOrWhiteSpace(model) ? "Hark" : $"Hark, with {model}";
+
+    public bool CanRetry { get; } = retry is not null;
+
     [ObservableProperty]
     private string _text = text;
+
+    [ObservableProperty]
+    private string _copyLabel = "Copy";
+
+    [RelayCommand]
+    private async Task CopyAsync()
+    {
+        try
+        {
+            System.Windows.Clipboard.SetText(Text);
+            CopyLabel = "Copied";
+            await Task.Delay(1400);
+            CopyLabel = "Copy";
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Copying an answer failed", ex);
+        }
+    }
+
+    [RelayCommand]
+    private void Retry() => retry?.Invoke(this);
 }
 
 public sealed partial class NoteVm(string text) : MessageVm
@@ -82,19 +109,95 @@ public sealed partial class ErrorVm(string text) : MessageVm
     public string Text { get; } = text;
 }
 
-public sealed partial class ToolCallVm(string callId, string name) : MessageVm
+public sealed partial class ToolStepVm(string callId, string name) : ObservableObject
 {
     public string CallId { get; } = callId;
     public string Name { get; } = name;
+    public DateTime Started { get; } = DateTime.Now;
 
     [ObservableProperty]
-    private string _status = "Running";
+    [NotifyPropertyChangedFor(nameof(IsDone), nameof(IsFailed))]
+    private bool _isRunning = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDone), nameof(IsFailed))]
+    private bool _failed;
 
     [ObservableProperty]
     private string _error = "";
 
+    /// <summary>"1.2 s" once finished.</summary>
     [ObservableProperty]
-    private bool _isRunning = true;
+    private string _took = "";
+
+    public double Seconds { get; set; }
+    public bool IsDone => !IsRunning && !Failed;
+    public bool IsFailed => !IsRunning && Failed;
+}
+
+/// <summary>One line for a run of tool calls ("Used 2 tools in 1.9 s") that opens to show each step.</summary>
+public sealed partial class ToolActivityVm : MessageVm
+{
+    public System.Collections.ObjectModel.ObservableCollection<ToolStepVm> Steps { get; } = new();
+
+    [ObservableProperty]
+    private string _summary = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDone), nameof(HasFailure))]
+    private bool _isRunning;
+
+    [ObservableProperty]
+    private bool _isExpanded;
+
+    public bool IsDone => !IsRunning && !HasFailure;
+    public bool HasFailure => !IsRunning && Steps.Any(s => s.Failed);
+
+    [RelayCommand]
+    private void Toggle() => IsExpanded = !IsExpanded;
+
+    public ToolStepVm Start(string callId, string name)
+    {
+        var step = new ToolStepVm(callId, name);
+        Steps.Add(step);
+        Refresh();
+        return step;
+    }
+
+    /// <summary>For chats loaded from history, where timings were not kept.</summary>
+    public void AddFinished(string name, bool ok)
+    {
+        Steps.Add(new ToolStepVm("", name) { IsRunning = false, Failed = !ok });
+        Refresh();
+    }
+
+    public void Finish(ToolStepVm step, bool ok, string? error)
+    {
+        step.Seconds = Math.Max(0, (DateTime.Now - step.Started).TotalSeconds);
+        step.Took = step.Seconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s";
+        step.Failed = !ok;
+        step.Error = ok ? "" : error ?? "";
+        step.IsRunning = false;
+        if (!ok) IsExpanded = true;
+        Refresh();
+    }
+
+    private void Refresh()
+    {
+        IsRunning = Steps.Any(s => s.IsRunning);
+        if (IsRunning)
+        {
+            Summary = $"Using {Steps.Last(s => s.IsRunning).Name}…";
+            return;
+        }
+        var count = Steps.Count == 1 ? "1 tool" : $"{Steps.Count} tools";
+        var total = Steps.Sum(s => s.Seconds);
+        var time = total > 0 ? $" in {total.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)} s" : "";
+        var failed = Steps.Count(s => s.Failed);
+        Summary = $"Used {count}{time}" + (failed > 0 ? $", {failed} failed" : "");
+        OnPropertyChanged(nameof(IsDone));
+        OnPropertyChanged(nameof(HasFailure));
+    }
 }
 
 /// <summary>An inline "may this tool run?" card. The task completes when the user picks an answer.</summary>

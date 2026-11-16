@@ -21,6 +21,7 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Assets\hark.ico" />
+    <Resource Include="Assets\Fonts\*.ttf" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
