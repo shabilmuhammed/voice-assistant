@@ -32,7 +32,71 @@ public sealed partial class SettingsViewModel : ObservableObject
         foreach (var mic in Hark.App.Voice.VoiceService.Microphones()) Microphones.Add(mic);
         _microphone = Microphones.FirstOrDefault(m => m.Device == main.Settings.MicrophoneDevice) ?? Microphones.FirstOrDefault();
         _startWithWindows = ReadStartWithWindows();
+        _azureCliFallback = main.Settings.AzureCliFallback;
         _loading = false;
+        if (_azureCliFallback) _ = RefreshAzureCliAsync();
+    }
+
+    // ---- Azure CLI fallback ----------------------------------------------------
+
+    [ObservableProperty]
+    private bool _azureCliFallback;
+
+    [ObservableProperty]
+    private string _azureCliStatus = "";
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SignInToAzureCommand))]
+    private bool _canSignInToAzure;
+
+    partial void OnAzureCliFallbackChanged(bool value)
+    {
+        if (_loading) return;
+        _main.Settings.AzureCliFallback = value;
+        Save();
+        _ = RefreshAzureCliAsync();
+    }
+
+    private async Task RefreshAzureCliAsync()
+    {
+        CanSignInToAzure = false;
+        if (!AzureCliFallback)
+        {
+            AzureCliStatus = "";
+            return;
+        }
+        if (AzureCli.FindExecutable() is null)
+        {
+            AzureCliStatus = "The Azure CLI is not installed on this PC, so there is nothing to fall back to. Install it first, or leave this off.";
+            return;
+        }
+        AzureCliStatus = "Checking the Azure CLI sign-in…";
+        var signedIn = await AzureCli.HasWorkingSignInAsync();
+        if (!AzureCliFallback) return;
+        AzureCliStatus = signedIn
+            ? "Signed in. Copilot reuses this sign-in without opening the browser until it expires."
+            : "Not signed in. Sign in once now, or the browser opens the first time Copilot needs it. The sign-in is then kept on this PC.";
+        CanSignInToAzure = !signedIn;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSignInToAzure))]
+    private async Task SignInToAzureAsync()
+    {
+        CanSignInToAzure = false;
+        AzureCliStatus = "Finish signing in in the browser window…";
+        var ok = await AzureCli.SignInAsync();
+        await RefreshAzureCliAsync();
+        if (!ok && CanSignInToAzure) AzureCliStatus = "The sign-in did not finish. Try again, or close any other sign-in window first.";
+    }
+
+    /// <summary>Screenshot state: the fallback on and not yet signed in. Nothing is saved or run.</summary>
+    public void ShowAzureDemo()
+    {
+        _loading = true;
+        AzureCliFallback = true;
+        _loading = false;
+        AzureCliStatus = "Not signed in. Sign in once now, or the browser opens the first time Copilot needs it. The sign-in is then kept on this PC.";
+        CanSignInToAzure = true;
     }
 
     public ObservableCollection<ModelChoice> Models { get; } = new();

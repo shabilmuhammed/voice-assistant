@@ -71,6 +71,7 @@ public partial class App : Application
         {
             _main.LoadDemo(PageArg(e.Args), approvals: e.Args.Contains("--demo-approvals"), skillEditor: e.Args.Contains("--demo-skill-editor"));
             if (e.Args.Contains("--demo-slash")) _main.Chat.Input = "/re";
+            if (e.Args.Contains("--demo-azure")) _main.Preferences.ShowAzureDemo();
             if (e.Args.Contains("--demo-empty"))
             {
                 _main.Chat.Messages.Clear();

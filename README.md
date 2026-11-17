@@ -7,6 +7,11 @@ A Windows desktop app that puts GitHub Copilot and your MCP tools in one window,
 - **Chat** with any model your Copilot plan offers. Answers stream in and are formatted (tables, code, lists).
 - **Your MCP tools**, read from the same `mcp.json` VS Code uses (`%APPDATA%\Code\User\mcp.json`).
 - **Tool approvals.** By default tools run without asking. Settings can change that to ask before changes, or always ask.
+- **Azure CLI fallback (off by default).** When a tool server such as Azure DevOps fails, Copilot may use the Azure CLI
+  (`az`) instead, but only if you switch this on in Settings and the Azure CLI is installed. While it is off, `az`
+  commands are refused. When it is on, Copilot signs in at most once: the Azure CLI keeps the sign-in in
+  `%USERPROFILE%\.azure`, and MarTechChat refuses any further `az login` while that sign-in still works (checked
+  without opening the browser). Settings shows whether you are signed in and has a Sign in now button.
 - **Work in your repos.** Copilot can pull, create a branch, edit and save files under your repositories folder,
   and commit and push when you ask, so a pull request can follow. 
 - **Skills.** Type `/` in the message box to pick a Copilot skill; the rest of the message is passed to it. Create and

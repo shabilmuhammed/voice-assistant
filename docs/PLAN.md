@@ -77,6 +77,8 @@ Done:
 - Screen reading: whole-desktop capture attached to a message, by button or by phrase.
 - Voice: "Hey Chat" wake phrase (configurable, no training), push to talk, on-screen panel, offline speech-to-text.
   Tested on recorded clips; not yet tested with a real microphone.
+- Azure CLI fallback: off by default, `az` commands refused unless switched on in Settings; when on, one `az login`
+  and the Azure CLI's cached sign-in is reused (repeat logins are refused while it still gives a token).
 - Windows build on GitHub Actions with tests, a zip to download and screenshots of every screen.
 
 Future:

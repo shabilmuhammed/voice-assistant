@@ -16,6 +16,9 @@ public sealed partial class ChatViewModel : ObservableObject
     private ChatSession? _session;
     private long? _conversationId;
     private string? _resumeSessionId;
+    private bool? _sessionUsesAzureCli;
+    private bool _azureNoteShown;
+    private readonly AzureLoginGate _azureLogin = new(AzureCli.HasWorkingSignInAsync);
     private bool _suppressModelChange;
     private bool _serversChecked;
 
@@ -343,9 +346,18 @@ public sealed partial class ChatViewModel : ObservableObject
                 _main.Store.AddMessage(_conversationId.Value, new AttachmentVm(file).IsImage ? "image" : "file", file);
             _main.Store.AddMessage(_conversationId.Value, "user", prompt);
 
+            // The Azure CLI setting changed since this chat started: reopen the chat with the new instructions, keeping its context.
+            if (_session is not null && _sessionUsesAzureCli != _main.Settings.AzureCliFallback)
+            {
+                var keep = _session.SessionId;
+                await CloseSessionAsync();
+                _resumeSessionId = keep;
+            }
+
             if (_session is null)
             {
                 var mcp = _main.LoadMcpServers();
+                var azureCli = _main.Settings.AzureCliFallback;
                 Status = mcp.Count > 0
                     ? "Starting your tools. The first message can take a minute or two."
                     : "Starting…";
@@ -354,11 +366,13 @@ public sealed partial class ChatViewModel : ObservableObject
                 var output = _main.Settings.EffectiveOutputFolder;
                 var options = new SessionOptions(SelectedModel?.Id, mcp, _resumeSessionId,
                     hasRepos ? repos : null,
-                    RepoPolicy.Instructions(hasRepos ? repos : null, output),
+                    RepoPolicy.Instructions(hasRepos ? repos : null, output) + "\n\n" +
+                    AzureCli.Instructions(azureCli, AzureCli.FindExecutable() is not null, AzureCli.FindDevOpsOrganization(mcp)),
                     [output, SkillLibrary.PersonalFolder],
                     [SkillLibrary.PersonalFolder]);
                 _session = await _main.Copilot.OpenSessionAsync(options, ApproveAsync);
                 _session.Event += OnChatEvent;
+                _sessionUsesAzureCli = azureCli;
                 if (_resumeSessionId is not null && !_session.Resumed)
                     Add(new NoteVm("The earlier context of this chat could not be restored, so Copilot only sees messages from here on."));
                 _resumeSessionId = null;
@@ -613,6 +627,8 @@ public sealed partial class ChatViewModel : ObservableObject
         CancelPendingApprovals();
         _alwaysAllowed.Clear();
         _serversChecked = false;
+        _sessionUsesAzureCli = null;
+        _azureNoteShown = false;
         if (_session is { } session)
         {
             _session = null;
@@ -698,6 +714,45 @@ public sealed partial class ChatViewModel : ObservableObject
     }
 
     private Task<ToolApproval> ApproveAsync(ToolApprovalRequest request)
+    {
+        // The Azure CLI is only used when the fallback is switched on in Settings, and signs in at most once.
+        if (request.Kind == ToolKind.Shell && AzureCli.UsesAz(request.Target, request.Executables))
+        {
+            if (!_main.Settings.AzureCliFallback)
+            {
+                Log.Info("Refused an Azure CLI command: the fallback is off.");
+                ShowAzureNote("Copilot tried the Azure CLI. It is turned off in Settings, so the command was skipped.");
+                return Task.FromResult(ToolApproval.DenyAzureCliOff);
+            }
+            if (AzureCli.IsLogin(request.Target)) return ApproveAzureLoginAsync(request);
+        }
+        return AskAsync(request);
+    }
+
+    private async Task<ToolApproval> ApproveAzureLoginAsync(ToolApprovalRequest request)
+    {
+        switch (await _azureLogin.DecideAsync())
+        {
+            case AzureLoginGate.Decision.AlreadySignedIn:
+                Log.Info("Refused az login: the cached Azure CLI sign-in still works.");
+                return ToolApproval.DenyAzureAlreadySignedIn;
+            case AzureLoginGate.Decision.InProgress:
+                Log.Info("Refused az login: a sign-in was started moments ago.");
+                return ToolApproval.DenyAzureSignInInProgress;
+            default:
+                ShowAzureNote("Copilot is signing in to the Azure CLI. Finish in the browser window; the sign-in is kept for later chats.");
+                return await AskAsync(request);
+        }
+    }
+
+    private void ShowAzureNote(string text)
+    {
+        if (_azureNoteShown) return;
+        _azureNoteShown = true;
+        Application.Current?.Dispatcher.BeginInvoke(() => Add(new NoteVm(text)));
+    }
+
+    private Task<ToolApproval> AskAsync(ToolApprovalRequest request)
     {
         var mode = _main.Settings.ApprovalMode;
 

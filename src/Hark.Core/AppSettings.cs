@@ -43,6 +43,12 @@ public sealed class AppSettings
         ["azure dev ops"] = "Azure DevOps",
     };
 
+    /// <summary>
+    /// Let Copilot fall back to the Azure CLI when a tool server fails. Off by default: many people do not have
+    /// the Azure CLI installed, and it signs in through the browser.
+    /// </summary>
+    public bool AzureCliFallback { get; set; }
+
     /// <summary>True once the first-run default for ReposRoot has been considered.</summary>
     public bool ReposRootSuggested { get; set; }
     public bool CloseToTray { get; set; } = true;

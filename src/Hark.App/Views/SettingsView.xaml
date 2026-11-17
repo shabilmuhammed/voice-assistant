@@ -20,7 +20,7 @@
                             </StackPanel>
                         </DockPanel>
                     </Border>
-                    <Border Style="{StaticResource LastRow}">
+                    <Border Style="{StaticResource Row}">
                         <DockPanel>
                             <ComboBox DockPanel.Dock="Right" Width="220" ItemsSource="{Binding Models}" DisplayMemberPath="Name"
                                       SelectedItem="{Binding DefaultModel, Mode=TwoWay}" VerticalAlignment="Center" AutomationProperties.Name="Default model" />
@@ -29,6 +29,24 @@
                                 <TextBlock Text="Used for new chats. You can still switch per chat." Style="{StaticResource Secondary}" />
                             </StackPanel>
                         </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource LastRow}">
+                        <StackPanel>
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" Style="{StaticResource H.Switch}" IsChecked="{Binding AzureCliFallback, Mode=TwoWay}"
+                                          VerticalAlignment="Top" Margin="0,2,0,0" AutomationProperties.Name="Azure CLI fallback" />
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="Azure CLI fallback" Style="{StaticResource RowTitle}" />
+                                    <TextBlock Text="When a tool server such as Azure DevOps fails, let Copilot use the Azure CLI instead. Needs the Azure CLI installed on this PC. While off, Copilot never runs az commands."
+                                               Style="{StaticResource Secondary}" />
+                                </StackPanel>
+                            </DockPanel>
+                            <DockPanel Margin="0,10,0,0" Visibility="{Binding AzureCliStatus, Converter={StaticResource TextToVisibility}}">
+                                <Button DockPanel.Dock="Right" Content="Sign in now" Command="{Binding SignInToAzureCommand}" Style="{StaticResource H.Button}"
+                                        Visibility="{Binding CanSignInToAzure, Converter={StaticResource BoolToVisibility}}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding AzureCliStatus}" Style="{StaticResource Secondary}" VerticalAlignment="Center" Margin="0,0,16,0" />
+                            </DockPanel>
+                        </StackPanel>
                     </Border>
                 </StackPanel>
             </Border>

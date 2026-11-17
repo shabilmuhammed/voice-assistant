@@ -12,7 +12,7 @@ public sealed record ModelChoice(string Id, string Name, bool Enabled, bool? Vis
     public override string ToString() => Name;
 }
 
-public enum ToolApproval { AllowOnce, Deny }
+public enum ToolApproval { AllowOnce, Deny, DenyAzureCliOff, DenyAzureAlreadySignedIn, DenyAzureSignInInProgress }
 
 public enum ToolKind { Mcp, Shell, Write, Read, Url, Other }
 
@@ -21,7 +21,7 @@ public enum ToolKind { Mcp, Shell, Write, Read, Url, Other }
 /// Target is the command for Shell and the file path for Write and Read.
 /// </summary>
 public sealed record ToolApprovalRequest(string Key, string Title, string Detail, bool ReadOnly,
-    ToolKind Kind = ToolKind.Other, string Target = "");
+    ToolKind Kind = ToolKind.Other, string Target = "", IReadOnlyList<string>? Executables = null);
 
 /// <summary>What a chat session is started with.</summary>
 public sealed record SessionOptions(
@@ -363,9 +363,14 @@ public sealed class ChatSession : IAsyncDisposable
         {
             var ask = Describe(request);
             var answer = await _approve(ask);
-            return answer == ToolApproval.AllowOnce
-                ? PermissionDecision.ApproveOnce()
-                : PermissionDecision.Reject("The user declined this action.");
+            return answer switch
+            {
+                ToolApproval.AllowOnce => PermissionDecision.ApproveOnce(),
+                ToolApproval.DenyAzureCliOff => PermissionDecision.Reject(AzureCli.TurnedOffFeedback),
+                ToolApproval.DenyAzureAlreadySignedIn => PermissionDecision.Reject(AzureCli.AlreadySignedInFeedback),
+                ToolApproval.DenyAzureSignInInProgress => PermissionDecision.Reject(AzureCli.SignInInProgressFeedback),
+                _ => PermissionDecision.Reject("The user declined this action."),
+            };
         }
         catch (Exception ex)
         {
@@ -382,7 +387,8 @@ public sealed class ChatSession : IAsyncDisposable
             Pretty(m.Args),
             m.ReadOnly == true, ToolKind.Mcp),
         PermissionRequestShell s => new ToolApprovalRequest("shell", "this command to run on your PC", s.FullCommandText ?? "", false,
-            ToolKind.Shell, s.FullCommandText ?? ""),
+            ToolKind.Shell, s.FullCommandText ?? "",
+            s.Commands?.Select(c => c.Identifier ?? "").Where(i => i.Length > 0).ToList()),
         PermissionRequestWrite w => new ToolApprovalRequest("write", "a file to be changed", w.ResolvedPath ?? w.FileName ?? "", false,
             ToolKind.Write, w.ResolvedPath ?? w.FileName ?? ""),
         PermissionRequestRead r => new ToolApprovalRequest("read", "a file to be read", r.ResolvedPath ?? r.Path ?? "", true,

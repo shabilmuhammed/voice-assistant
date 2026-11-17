@@ -88,6 +88,7 @@ jobs:
           Shot "history-light" 1 $false
           Shot "connections-light" 3 $false
           Shot "settings-light" 4 $false
+          Shot "settings-azure-dark" 4 $true "--demo-azure"
           Shot "chat-dark" 0 $true
           Shot "connections-dark" 3 $true
           Get-ChildItem shots

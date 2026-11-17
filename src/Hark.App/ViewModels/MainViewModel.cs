@@ -19,6 +19,7 @@ public sealed partial class MainViewModel : ObservableObject
             Settings.ReposRootSuggested = true;
             try { Settings.Save(); } catch (Exception ex) { Log.Error("Saving settings failed", ex); }
         }
+        AzureCli.SkipSubscriptionQuestion();
         Store = new ChatStore();
         Copilot = new CopilotService();
         Chat = new ChatViewModel(this);
