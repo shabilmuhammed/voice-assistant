@@ -16,7 +16,7 @@
                             <TextBlock Text="Personal access token" Style="{StaticResource RowTitle}" />
                         </DockPanel>
                         <TextBlock Style="{StaticResource Secondary}" Margin="0,2,0,12"
-                                   Text="A fine-grained token with the Copilot Requests permission. It is the only GitHub sign-in Hark uses, and it is saved as plain text in settings.json on this PC." />
+                                   Text="A fine-grained token with the Copilot Requests permission. It is the only GitHub sign-in MarTechChat uses, and it is saved as plain text in settings.json on this PC." />
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Content="Save and test" Margin="10,0,0,0" Style="{StaticResource H.Primary}" Command="{Binding SaveAndTestCommand}" />
                             <PasswordBox x:Name="PatBox" Style="{StaticResource H.PasswordField}" PasswordChanged="PatBox_PasswordChanged"
@@ -69,7 +69,7 @@
             <Border Style="{StaticResource Card}">
                 <Border Style="{StaticResource LastRow}">
                     <TextBlock Style="{StaticResource Secondary}"
-                               Text="Your martechchat server signs in to Microsoft by itself: the first time a Purview tool runs in a chat, your browser opens. Hark keeps the server running in the background, so the sign-in is reused until it expires or Hark is closed." />
+                               Text="Your martechchat server signs in to Microsoft by itself: the first time a Purview tool runs in a chat, your browser opens. MarTechChat keeps the server running in the background, so the sign-in is reused until it expires or MarTechChat is closed." />
                 </Border>
             </Border>
         </StackPanel>

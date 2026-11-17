@@ -80,7 +80,7 @@
                                       AutomationProperties.Name="Also wake on recognised words" />
                             <StackPanel Margin="0,0,16,0">
                                 <TextBlock Text="Also wake on recognised words" Style="{StaticResource RowTitle}" />
-                                <TextBlock Text="Hark transcribes what it hears on this PC and wakes when the words match. It reacts after a short pause and copes better with accents."
+                                <TextBlock Text="MarTechChat transcribes what it hears on this PC and wakes when the words match. It reacts after a short pause and copes better with accents."
                                            Style="{StaticResource Secondary}" />
                             </StackPanel>
                         </DockPanel>
@@ -102,7 +102,7 @@
                                          Value="{Binding Voice.Level, Mode=OneWay}" Foreground="{DynamicResource H.Signal}" Background="{DynamicResource H.Sunken}"
                                          BorderThickness="0" AutomationProperties.Name="Microphone level" />
                             <StackPanel Margin="0,0,16,0">
-                                <TextBlock Text="What Hark hears" Style="{StaticResource RowTitle}" />
+                                <TextBlock Text="What MarTechChat hears" Style="{StaticResource RowTitle}" />
                                 <TextBlock Text="{Binding Voice.LastHeard}" Style="{StaticResource Secondary}" />
                             </StackPanel>
                         </DockPanel>
@@ -110,7 +110,7 @@
                     <Border Style="{StaticResource LastRow}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource Secondary}"
-                                       Text="Ctrl + Alt + Space starts listening without the wake phrase. Esc cancels while Hark is listening." />
+                                       Text="Ctrl + Alt + Space starts listening without the wake phrase. Esc cancels while MarTechChat is listening." />
                             <TextBlock Text="{Binding VoiceNote}" TextWrapping="Wrap" FontSize="13" Margin="0,6,0,0" Foreground="{DynamicResource H.Warn}"
                                        Visibility="{Binding VoiceNote, Converter={StaticResource TextToVisibility}}" />
                         </StackPanel>
@@ -175,7 +175,7 @@
                                       AutomationProperties.Name="Keep running in the tray when the window is closed" />
                             <StackPanel Margin="0,0,16,0">
                                 <TextBlock Text="Keep running in the tray when the window is closed" Style="{StaticResource RowTitle}" />
-                                <TextBlock Text="Use Quit in the tray icon's menu to stop Hark completely." Style="{StaticResource Secondary}" />
+                                <TextBlock Text="Use Quit in the tray icon's menu to stop MarTechChat completely." Style="{StaticResource Secondary}" />
                             </StackPanel>
                         </DockPanel>
                     </Border>

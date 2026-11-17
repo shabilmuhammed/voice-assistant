@@ -5,17 +5,9 @@
              xmlns:ctl="clr-namespace:Hark.App.Controls"
              AllowDrop="True" DragOver="OnDragOver" Drop="OnDrop">
     <UserControl.Resources>
-        <!-- The small Hark mark beside each answer. -->
+        <!-- The small app icon beside each answer. -->
         <ControlTemplate x:Key="MiniMark" TargetType="ContentControl">
-            <Border Width="20" Height="20" CornerRadius="6" Background="{DynamicResource H.Signal}">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Rectangle Width="2" Height="4" RadiusX="1" RadiusY="1" Fill="{DynamicResource H.OnSignal}" Margin="0,0,2,0" />
-                    <Rectangle Width="2" Height="8" RadiusX="1" RadiusY="1" Fill="{DynamicResource H.OnSignal}" Margin="0,0,2,0" />
-                    <Rectangle Width="2" Height="10" RadiusX="1" RadiusY="1" Fill="{DynamicResource H.OnSignal}" Margin="0,0,2,0" />
-                    <Rectangle Width="2" Height="8" RadiusX="1" RadiusY="1" Fill="{DynamicResource H.OnSignal}" Margin="0,0,2,0" />
-                    <Rectangle Width="2" Height="4" RadiusX="1" RadiusY="1" Fill="{DynamicResource H.OnSignal}" />
-                </StackPanel>
-            </Border>
+            <Image Source="/Assets/app-128.png" Width="20" Height="20" RenderOptions.BitmapScalingMode="HighQuality" />
         </ControlTemplate>
 
         <!-- A file chip: used for attachments in a message and in the message box. -->

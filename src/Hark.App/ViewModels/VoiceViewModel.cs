@@ -31,14 +31,14 @@ public sealed partial class VoiceViewModel : ObservableObject
         _service.Silent += () => OnUi(() =>
         {
             StatusText = "Microphone is silent";
-            LastHeard = "No sound is reaching Hark. In Windows, open Settings, Privacy and security, Microphone, and turn on " +
+            LastHeard = "No sound is reaching MarTechChat. In Windows, open Settings, Privacy and security, Microphone, and turn on " +
                         "\u201CLet desktop apps access your microphone\u201D. If it is already on, pick your headset or laptop microphone above.";
         });
         _service.Heard += text => OnUi(() => LastHeard = $"Heard: \u201C{text}\u201D");
 
         main.Chat.AssistantTextChanged += text => { if (_voiceTurn) { Answer = text; State = OverlayState.Answer; } };
         main.Chat.TurnEnded += OnTurnEnded;
-        main.Chat.AttentionNeeded += () => { if (_voiceTurn) Show(OverlayState.Message, "Hark needs your approval to continue. Its window is open."); };
+        main.Chat.AttentionNeeded += () => { if (_voiceTurn) Show(OverlayState.Message, "MarTechChat needs your approval to continue. Its window is open."); };
     }
 
     [ObservableProperty]
@@ -156,7 +156,7 @@ public sealed partial class VoiceViewModel : ObservableObject
         }
         if (!_main.Copilot.IsConnected)
         {
-            Show(OverlayState.Message, "Copilot is not connected. Add your GitHub PAT in Hark first.");
+            Show(OverlayState.Message, "Copilot is not connected. Add your GitHub PAT in MarTechChat first.");
             return;
         }
 
@@ -167,7 +167,7 @@ public sealed partial class VoiceViewModel : ObservableObject
         else
         {
             _voiceTurn = false;
-            Show(OverlayState.Message, "That could not be sent. Open Hark to see why.");
+            Show(OverlayState.Message, "That could not be sent. Open MarTechChat to see why.");
         }
     }
 
@@ -176,7 +176,7 @@ public sealed partial class VoiceViewModel : ObservableObject
         if (!_voiceTurn) return;
         _voiceTurn = false;
         if (error is not null) Show(OverlayState.Message, error);
-        else if (Answer.Length == 0) Show(OverlayState.Message, "Done. Open Hark to see the details.");
+        else if (Answer.Length == 0) Show(OverlayState.Message, "Done. Open MarTechChat to see the details.");
         else
         {
             State = OverlayState.Answer;

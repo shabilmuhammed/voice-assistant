@@ -68,8 +68,8 @@ public sealed partial class AssistantMessageVm(string messageId, string text, st
 {
     public string MessageId { get; } = messageId;
 
-    /// <summary>"Hark", or "Hark, with Claude Sonnet 5.5" when the model is known.</summary>
-    public string Byline { get; } = string.IsNullOrWhiteSpace(model) ? "Hark" : $"Hark, with {model}";
+    /// <summary>"MarTechChat", or "MarTechChat, with Claude Sonnet 5.5" when the model is known.</summary>
+    public string Byline { get; } = string.IsNullOrWhiteSpace(model) ? "MarTechChat" : $"MarTechChat, with {model}";
 
     public bool CanRetry { get; } = retry is not null;
 

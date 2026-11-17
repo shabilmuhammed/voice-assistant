@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:Hark.App.ViewModels"
         xmlns:v="clr-namespace:Hark.App.Views"
-        Title="Hark" Icon="/Assets/hark.ico" Width="1120" Height="760" MinWidth="820" MinHeight="560"
+        Title="MarTechChat" Icon="/Assets/app.ico" Width="1120" Height="760" MinWidth="820" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource H.Canvas}" Foreground="{DynamicResource H.Ink}"
         FontFamily="{StaticResource UiFont}" FontSize="14"
@@ -36,16 +36,9 @@
                 <DockPanel>
                     <!-- brand (also the place to drag the window) -->
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Height="54" Margin="16,0,0,0">
-                        <Border Width="26" Height="26" CornerRadius="8" Background="{DynamicResource H.Signal}" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Rectangle Width="2.5" Height="5" RadiusX="1.25" RadiusY="1.25" Fill="{DynamicResource H.OnSignal}" Margin="0,0,2.5,0" />
-                                <Rectangle Width="2.5" Height="10" RadiusX="1.25" RadiusY="1.25" Fill="{DynamicResource H.OnSignal}" Margin="0,0,2.5,0" />
-                                <Rectangle Width="2.5" Height="14" RadiusX="1.25" RadiusY="1.25" Fill="{DynamicResource H.OnSignal}" Margin="0,0,2.5,0" />
-                                <Rectangle Width="2.5" Height="10" RadiusX="1.25" RadiusY="1.25" Fill="{DynamicResource H.OnSignal}" Margin="0,0,2.5,0" />
-                                <Rectangle Width="2.5" Height="5" RadiusX="1.25" RadiusY="1.25" Fill="{DynamicResource H.OnSignal}" />
-                            </StackPanel>
-                        </Border>
-                        <TextBlock Text="Hark" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0" />
+                        <Image Source="/Assets/app-128.png" Width="28" Height="28" VerticalAlignment="Center"
+                               RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="MarTechChat" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0" />
                     </StackPanel>
 
                     <Button DockPanel.Dock="Top" Style="{StaticResource H.Button}" Margin="12,2,12,10" Padding="12,9"

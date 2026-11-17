@@ -77,7 +77,7 @@ public sealed class VoiceService : IDisposable
             var models = VoiceModels.Find();
             if (models is null)
             {
-                Problem = "The voice models are missing from this copy of Hark.";
+                Problem = "The voice models are missing from this copy of MarTechChat.";
                 return false;
             }
             if (WaveIn.DeviceCount == 0)

@@ -1,7 +1,6 @@
-# Hark
+# MarTechChat
 
 A Windows desktop app that puts GitHub Copilot and your MCP tools in one window, without VS Code.
-"Hark" is a working name.
 
 ## What it does today
 
@@ -14,15 +13,15 @@ A Windows desktop app that puts GitHub Copilot and your MCP tools in one window,
 - **Generate files.** Files you ask for are saved in a folder you choose (Documents\Hark by default) and listed in the chat.
 - **Read your screen.** The screen button, or phrases like "my screen" and "this code", attach a capture of the
   whole desktop to your message.
-- **Voice.** Say "Hey Chat" (or your own phrase) while Hark is in the tray. A small panel appears above your other
+- **Voice.** Say "Hey Chat" (or your own phrase) while MarTechChat is in the tray. A small panel appears above your other
   windows, listens until you stop speaking, and shows the answer as text. Ctrl+Alt+Space does the same without the phrase.
   Wake phrase, speech recognition and end-of-speech detection all run on this PC.
 - **History.** Every chat is saved on this PC and can be reopened and continued.
-- **Tray.** Closing the window keeps Hark running; Quit is in the tray icon's menu.
+- **Tray.** Closing the window keeps MarTechChat running; Quit is in the tray icon's menu.
 
 ## Run it
 
-**From the build:** open the latest run under the repository's Actions tab, download `hark-win-x64`, unzip, run `Hark.exe`.
+**From the build:** open the latest run under the repository's Actions tab, download `martechchat-win-x64`, unzip, run `MarTechChat.exe`.
 Nothing else needs installing.
 
 **From Visual Studio:** open `Hark.sln`, set `Hark.App` as the startup project, press Ctrl+F5. Needs the .NET 10 SDK.
@@ -33,11 +32,11 @@ Add `-p:FetchVoiceModels=false` to skip the models; voice is then unavailable.
 
 1. **Connections:** paste your fine-grained GitHub PAT (it needs the Copilot Requests permission) and click Save and test.
 2. **Connections:** check your MCP servers are listed.
-3. **Settings:** check the Repositories folder (Hark fills in `%USERPROFILE%\source\repos` if it exists) and the Generated files folder.
+3. **Settings:** check the Repositories folder (MarTechChat fills in `%USERPROFILE%\source\repos` if it exists) and the Generated files folder.
 
 ## Where things are kept
 
-Everything is on this PC, in `%LOCALAPPDATA%\Hark`:
+Everything is on this PC, in `%LOCALAPPDATA%\Hark` (the folder keeps its original name so existing chats and settings carry over):
 
 | File | Contents |
 |---|---|
@@ -47,7 +46,7 @@ Everything is on this PC, in `%LOCALAPPDATA%\Hark`:
 | `hark.log` | Log, with the PAT and MCP tokens masked |
 | `workspace\` | Copilot's working folder when no repositories folder is set |
 
-MCP tokens stay in `mcp.json`. Hark only reads that file.
+MCP tokens stay in `mcp.json`. MarTechChat only reads that file.
 
 ## What leaves the PC
 
@@ -78,5 +77,5 @@ dotnet test tests/Hark.Voice.Tests
 The second command downloads about 300 MB of voice models into `models/` the first time.
 `settings.json` has a `VoiceCorrections` list for words the recognizer gets wrong (for example "per view" for "Purview").
 
-`Hark.exe --demo` opens the app with sample data and talks to nothing. The build uses it to take screenshots,
+`MarTechChat.exe --demo` opens the app with sample data and talks to nothing. The build uses it to take screenshots,
 which it publishes to the `ci-screenshots` branch.

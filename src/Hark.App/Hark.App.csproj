@@ -7,10 +7,12 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>Hark</AssemblyName>
+    <AssemblyName>MarTechChat</AssemblyName>
+    <Product>MarTechChat</Product>
+    <AssemblyTitle>MarTechChat</AssemblyTitle>
     <RootNamespace>Hark.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>Assets\hark.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <NoWarn>$(NoWarn);WPF0001;WFO0003</NoWarn>
   </PropertyGroup>
   <ItemGroup>
@@ -20,7 +22,8 @@
     <Using Include="System.IO" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Assets\hark.ico" />
+    <Resource Include="Assets\app.ico" />
+    <Resource Include="Assets\app-128.png" />
     <Resource Include="Assets\Fonts\*.ttf" />
   </ItemGroup>
   <ItemGroup>

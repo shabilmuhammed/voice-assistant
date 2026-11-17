@@ -45,7 +45,7 @@ jobs:
           $found = Get-ChildItem out/hark -Recurse -Filter "copilot*" | Select-Object -ExpandProperty FullName
           $found
           if (-not $found) { throw "Copilot runtime files are missing from the published app." }
-          if (-not (Test-Path out/hark/Hark.exe)) { throw "Hark.exe is missing." }
+          if (-not (Test-Path out/hark/MarTechChat.exe)) { throw "MarTechChat.exe is missing." }
 
       - name: Screenshots of each screen with sample data
         shell: pwsh
@@ -58,7 +58,7 @@ jobs:
             $key = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
             New-Item -Path $key -Force | Out-Null
             Set-ItemProperty -Path $key -Name AppsUseLightTheme -Value $v -Type DWord
-            $p = Start-Process -FilePath "out/hark/Hark.exe" -ArgumentList (@("--demo","--page",$page) + @($extra | Where-Object { $_ })) -PassThru
+            $p = Start-Process -FilePath "out/hark/MarTechChat.exe" -ArgumentList (@("--demo","--page",$page) + @($extra | Where-Object { $_ })) -PassThru
             Start-Sleep -Seconds 8
             $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
             $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
@@ -94,9 +94,9 @@ jobs:
           if (Test-Path $log) { Remove-Item $log }
           foreach ($theme in 1, 0) {
             Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name AppsUseLightTheme -Value $theme -Type DWord
-            $p = Start-Process -FilePath "out/hark/Hark.exe" -ArgumentList "--demo","--selftest" -PassThru
+            $p = Start-Process -FilePath "out/hark/MarTechChat.exe" -ArgumentList "--demo","--selftest" -PassThru
             if (-not $p.WaitForExit(90000)) { Stop-Process -Id $p.Id -Force; throw "The self-test did not finish." }
-            $p = Start-Process -FilePath "out/hark/Hark.exe" -ArgumentList "--demo","--demo-approvals","--selftest" -PassThru
+            $p = Start-Process -FilePath "out/hark/MarTechChat.exe" -ArgumentList "--demo","--demo-approvals","--selftest" -PassThru
             if (-not $p.WaitForExit(90000)) { Stop-Process -Id $p.Id -Force; throw "The self-test did not finish." }
           }
           Get-Content $log
@@ -138,6 +138,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hark-win-x64
+          name: martechchat-win-x64
           path: out/hark
           retention-days: 14

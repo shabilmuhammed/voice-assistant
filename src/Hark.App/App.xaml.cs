@@ -22,7 +22,7 @@ public partial class App : Application
         _singleInstance = new Mutex(initiallyOwned: true, "Hark.SingleInstance", out var isFirst);
         if (!isFirst)
         {
-            MessageBox.Show("Hark is already running. Look for its icon in the system tray.", "Hark");
+            MessageBox.Show("MarTechChat is already running. Look for its icon in the system tray.", "MarTechChat");
             Shutdown();
             return;
         }
@@ -225,7 +225,7 @@ public partial class App : Application
         try
         {
             var menu = new System.Windows.Forms.ContextMenuStrip();
-            menu.Items.Add("Open Hark", null, (_, _) => ShowWindow());
+            menu.Items.Add("Open MarTechChat", null, (_, _) => ShowWindow());
             menu.Items.Add("New chat", null, (_, _) => { ShowWindow(); _main?.Chat.NewChatCommand.Execute(null); });
             var listen = new System.Windows.Forms.ToolStripMenuItem("Listen for the wake phrase") { CheckOnClick = true };
             listen.Click += (_, _) =>
@@ -241,7 +241,7 @@ public partial class App : Application
             _tray = new System.Windows.Forms.NotifyIcon
             {
                 Icon = TrayIcon(),
-                Text = "Hark",
+                Text = "MarTechChat",
                 Visible = true,
                 ContextMenuStrip = menu,
             };
@@ -261,7 +261,7 @@ public partial class App : Application
     {
         try
         {
-            var resource = GetResourceStream(new Uri("pack://application:,,,/Assets/hark.ico"));
+            var resource = GetResourceStream(new Uri("pack://application:,,,/Assets/app.ico"));
             if (resource is not null)
                 using (resource.Stream)
                     return new System.Drawing.Icon(resource.Stream, System.Windows.Forms.SystemInformation.SmallIconSize);
@@ -315,7 +315,7 @@ public partial class App : Application
         }
         MessageBox.Show(
             $"Something went wrong:\n\n{e.Exception.Message}\n\nDetails were saved to:\n{AppPaths.LogFile}",
-            "Hark", MessageBoxButton.OK, MessageBoxImage.Warning);
+            "MarTechChat", MessageBoxButton.OK, MessageBoxImage.Warning);
         e.Handled = true;
     }
 }
