@@ -204,7 +204,14 @@ public static partial class AzureCli
         }
     }
 
-    private static string FirstLine(string text) => text.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "";
+    /// <summary>The Azure CLI's first message line, without its own "ERROR:" label: not being signed in is expected, not an app error.</summary>
+    public static string FirstLine(string text)
+    {
+        var line = text.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "";
+        foreach (var label in new[] { "ERROR:", "WARNING:" })
+            if (line.StartsWith(label, StringComparison.OrdinalIgnoreCase)) return line[label.Length..].Trim();
+        return line;
+    }
 }
 
 /// <summary>

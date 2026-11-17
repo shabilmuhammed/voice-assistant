@@ -89,6 +89,13 @@ public class AzureCliTests
         Assert.Contains("Never run az login a second time", on);
     }
 
+    [Theory]
+    [InlineData("ERROR: Please run 'az login' to setup account.\r\n", "Please run 'az login' to setup account.")]
+    [InlineData("WARNING: something\nmore", "something")]
+    [InlineData("", "")]
+    public void Logs_az_messages_without_their_error_label(string stderr, string expected) =>
+        Assert.Equal(expected, AzureCli.FirstLine(stderr));
+
     [Fact]
     public void Settings_have_the_fallback_off_by_default() => Assert.False(new AppSettings().AzureCliFallback);
 
