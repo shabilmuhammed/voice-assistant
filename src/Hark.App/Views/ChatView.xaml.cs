@@ -103,11 +103,39 @@ public partial class ChatView : UserControl
         }
     }
 
+    // Clicking a skill in the "/" menu picks it.
+    private void SlashList_MouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is FrameworkElement { DataContext: Hark.Core.SkillInfo skill })
+        {
+            _vm?.PickSkillCommand.Execute(skill);
+            e.Handled = true;
+        }
+    }
+
     private void InputBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // While the "/" menu is open, the arrow keys move through it and Enter or Tab picks.
+        if (_vm is { IsSlashOpen: true })
+        {
+            switch (e.Key)
+            {
+                case Key.Down: _vm.MoveSlash(1); e.Handled = true; ScrollSlash(); return;
+                case Key.Up: _vm.MoveSlash(-1); e.Handled = true; ScrollSlash(); return;
+                case Key.Enter or Key.Tab when !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift): _vm.AcceptSlash(); e.Handled = true; return;
+                case Key.Escape: _vm.DismissSlash(); e.Handled = true; return;
+            }
+        }
+
         // Enter sends; Shift+Enter adds a new line.
         if (e.Key != Key.Enter || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) return;
         e.Handled = true;
         if (_vm is { IsBusy: false } && _vm.SendCommand.CanExecute(null)) _vm.SendCommand.Execute(null);
+    }
+
+    private void ScrollSlash()
+    {
+        if (_vm is { SlashListIndex: >= 0 } vm && vm.SlashListIndex < SlashList.Items.Count)
+            SlashList.ScrollIntoView(SlashList.Items[vm.SlashListIndex]);
     }
 }

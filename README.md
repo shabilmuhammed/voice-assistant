@@ -9,6 +9,9 @@ A Windows desktop app that puts GitHub Copilot and your MCP tools in one window,
 - **Tool approvals.** By default tools run without asking. Settings can change that to ask before changes, or always ask.
 - **Work in your repos.** Copilot can pull, create a branch, edit and save files under your repositories folder,
   and commit and push when you ask, so a pull request can follow. 
+- **Skills.** Type `/` in the message box to pick a Copilot skill; the rest of the message is passed to it. Create and
+  edit skills on the Skills page. They are saved as `SKILL.md` files in `%USERPROFILE%\.copilot\skills`, the personal
+  skills folder Copilot uses, so existing skills there show up too.
 - **Attach files and images.** Use the paperclip, drag files in, or paste an image.
 - **Generate files.** Files you ask for are saved in a folder you choose (Documents\Hark by default) and listed in the chat.
 - **Read your screen.** The screen button, or phrases like "my screen" and "this code", attach a capture of the

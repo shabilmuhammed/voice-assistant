@@ -320,6 +320,63 @@
         <!-- ============ message box ============ -->
         <Grid VerticalAlignment="Bottom" Margin="24,0,24,18" MaxWidth="740">
             <StackPanel>
+                <!-- The "/" menu: skills that match what is typed, and a way to create one. -->
+                <Border x:Name="SlashMenu" CornerRadius="14" Background="{DynamicResource H.Raised}" BorderBrush="{DynamicResource H.Line}"
+                        BorderThickness="1" Padding="6" Margin="0,0,0,8"
+                        Visibility="{Binding IsSlashOpen, Converter={StaticResource BoolToVisibility}}">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="26" ShadowDepth="6" Direction="270" Color="{DynamicResource H.ShadowColor}" Opacity="{DynamicResource H.ShadowOpacity}" />
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="Skills" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource H.Ink3}" Margin="10,4,0,4" />
+                        <ListBox x:Name="SlashList" ItemsSource="{Binding SlashMatches}" SelectedIndex="{Binding SlashListIndex, Mode=OneWay}"
+                                 ItemContainerStyle="{StaticResource H.MenuItem}" MaxHeight="248" Focusable="False"
+                                 Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 PreviewMouseLeftButtonUp="SlashList_MouseUp" AutomationProperties.Name="Skills"
+                                 Visibility="{Binding HasSlashMatches, Converter={StaticResource BoolToVisibility}}">
+                            <ListBox.Template>
+                                <ControlTemplate TargetType="ListBox">
+                                    <ScrollViewer Focusable="False" VerticalScrollBarVisibility="Auto"><ItemsPresenter /></ScrollViewer>
+                                </ControlTemplate>
+                            </ListBox.Template>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Command}" FontFamily="{StaticResource MonoFont}" FontSize="13.5" FontWeight="Medium"
+                                                       Foreground="{DynamicResource H.Ink}" />
+                                            <TextBlock Text="{Binding ArgumentHint}" FontFamily="{StaticResource MonoFont}" FontSize="12.5"
+                                                       Foreground="{DynamicResource H.Ink3}" Margin="8,1,0,0" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Description}" FontSize="12.5" Foreground="{DynamicResource H.Ink2}"
+                                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock Text="{Binding SlashEmptyText}" Style="{StaticResource Secondary}" Margin="10,4,10,6"
+                                   Visibility="{Binding HasSlashMatches, Converter={StaticResource BoolToVisibility}, ConverterParameter=invert}" />
+                        <Border BorderBrush="{DynamicResource H.Line}" BorderThickness="0,1,0,0" Margin="4,4,4,0" Padding="0,4,0,0">
+                            <Button Padding="10,7" Command="{Binding CreateSkillFromMenuCommand}" Focusable="False"
+                                    AutomationProperties.Name="Create a skill">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource H.RowButton}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsCreateHighlighted}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource H.SignalSoft}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" FontSize="12" Text="&#xE710;" Margin="0,0,10,0" Foreground="{DynamicResource H.Signal}" />
+                                    <TextBlock Text="Create a skill" FontSize="13.5" Foreground="{DynamicResource H.Ink}" />
+                                </StackPanel>
+                            </Button>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
                 <TextBlock Text="{Binding Status}" Style="{StaticResource Secondary}" Margin="6,0,0,8"
                            Visibility="{Binding Status, Converter={StaticResource TextToVisibility}}" />
                 <Grid>
@@ -365,7 +422,7 @@
                             </ItemsControl>
 
                             <Grid>
-                                <TextBlock x:Name="Placeholder" Text="Ask about your repos, work items or data" FontSize="15" Margin="2,4,0,4"
+                                <TextBlock x:Name="Placeholder" Text="Ask about your repos, work items or data. Type / for skills." FontSize="15" Margin="2,4,0,4"
                                            Foreground="{DynamicResource H.Ink3}" IsHitTestVisible="False" />
                                 <TextBox x:Name="InputBox" Text="{Binding Input, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource SelectableText}" IsReadOnly="False" AcceptsReturn="True" FontSize="15" Padding="0,4"

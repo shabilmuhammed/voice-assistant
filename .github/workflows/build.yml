@@ -76,15 +76,20 @@ jobs:
           Shot "chat-empty" 0 $false "--demo-empty"
           Shot "chat-empty-dark" 0 $true "--demo-empty"
           Shot "history-dark" 1 $true
-          Shot "settings-dark" 3 $true
+          Shot "skills-light" 2 $false
+          Shot "skills-dark" 2 $true
+          Shot "skill-editor" 2 $false "--demo-skill-editor"
+          Shot "chat-slash" 0 $false "--demo-slash"
+          Shot "chat-slash-dark" 0 $true "--demo-slash"
+          Shot "settings-dark" 4 $true
           Shot "voice-listening" 1 $false @("--demo-voice","listening")
           Shot "voice-working" 1 $false @("--demo-voice","working")
           Shot "voice-answer" 1 $true @("--demo-voice","answer")
           Shot "history-light" 1 $false
-          Shot "connections-light" 2 $false
-          Shot "settings-light" 3 $false
+          Shot "connections-light" 3 $false
+          Shot "settings-light" 4 $false
           Shot "chat-dark" 0 $true
-          Shot "connections-dark" 2 $true
+          Shot "connections-dark" 3 $true
           Get-ChildItem shots
 
       - name: Press every button on every screen

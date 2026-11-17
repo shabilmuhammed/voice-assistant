@@ -24,6 +24,8 @@ public sealed partial class MainViewModel : ObservableObject
         Chat = new ChatViewModel(this);
         History = new HistoryViewModel(this);
         Connections = new ConnectionsViewModel(this);
+        Skills = new SkillsViewModel(this);
+        Skills.Changed += () => _ = Chat.ReloadSkillsAsync();
         Voice = new VoiceViewModel(this);
         Preferences = new SettingsViewModel(this);
         _currentPage = Chat;
@@ -42,6 +44,10 @@ public sealed partial class MainViewModel : ObservableObject
     public ConnectionsViewModel Connections { get; }
     public SettingsViewModel Preferences { get; }
     public VoiceViewModel Voice { get; }
+    public SkillsViewModel Skills { get; }
+
+    // Sidebar order. The selection pill and the page shown both follow these numbers.
+    public const int ChatPage = 0, HistoryPage = 1, SkillsPage = 2, ConnectionsPage = 3, SettingsPage = 4;
 
     private bool _demo;
 
@@ -74,9 +80,10 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void UpdatePageTitle() => PageTitle = SelectedNavIndex switch
     {
-        1 => "History",
-        2 => "Connections",
-        3 => "Settings",
+        HistoryPage => "History",
+        SkillsPage => "Skills",
+        ConnectionsPage => "Connections",
+        SettingsPage => "Settings",
         _ => Chat.Title,
     };
 
@@ -89,11 +96,11 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void SearchChats()
     {
-        SelectedNavIndex = 1;
+        SelectedNavIndex = HistoryPage;
         History.FocusSearch();
     }
 
-    /// <summary>0 Chat, 1 History, 2 Connections, 3 Settings.</summary>
+    /// <summary>One of ChatPage, HistoryPage, SkillsPage, ConnectionsPage, SettingsPage.</summary>
     [ObservableProperty]
     private int _selectedNavIndex;
 
@@ -115,18 +122,27 @@ public sealed partial class MainViewModel : ObservableObject
     {
         CurrentPage = value switch
         {
-            1 => History,
-            2 => Connections,
-            3 => Preferences,
+            HistoryPage => History,
+            SkillsPage => Skills,
+            ConnectionsPage => Connections,
+            SettingsPage => Preferences,
             _ => Chat,
         };
         UpdatePageTitle();
         if (_demo) return;
-        if (value == 1) History.Refresh();
-        if (value == 2) { Connections.Reload(); UpdateToolsStatus(); }
+        if (value == HistoryPage) History.Refresh();
+        if (value == SkillsPage) _ = Skills.RefreshAsync();
+        if (value == ConnectionsPage) { Connections.Reload(); UpdateToolsStatus(); }
     }
 
-    public void ShowChat() => SelectedNavIndex = 0;
+    public void ShowChat() => SelectedNavIndex = ChatPage;
+
+    /// <summary>Opens the Skills page with an empty editor.</summary>
+    public void CreateSkill()
+    {
+        SelectedNavIndex = SkillsPage;
+        Skills.New();
+    }
 
     public async Task InitializeAsync()
     {
@@ -134,10 +150,11 @@ public sealed partial class MainViewModel : ObservableObject
         Connections.Reload();
         UpdateToolsStatus();
         RefreshRecents();
+        await Skills.RefreshAsync();
         if (string.IsNullOrWhiteSpace(Settings.GitHubPat))
         {
             ConnectionStatus = "Add your GitHub PAT to get started";
-            SelectedNavIndex = 2;
+            SelectedNavIndex = ConnectionsPage;
             return;
         }
         await ConnectAsync(Settings.GitHubPat);
@@ -154,6 +171,7 @@ public sealed partial class MainViewModel : ObservableObject
         ConnectionStatus = result.Ok ? "Copilot connected" : "Copilot not connected";
         if (!result.Ok) return result;
 
+        _ = Skills.RefreshAsync(); // now the runtime can add built-in and plugin skills
         try
         {
             Chat.SetModels(await Copilot.GetModelsAsync());
@@ -187,7 +205,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>Sample content for screenshots. Nothing is sent or saved.</summary>
-    public void LoadDemo(int page, bool approvals = false)
+    public void LoadDemo(int page, bool approvals = false, bool skillEditor = false)
     {
         _demo = true;
         ConnectionStatus = "Copilot connected";
@@ -197,6 +215,7 @@ public sealed partial class MainViewModel : ObservableObject
         Chat.LoadDemo(approvals);
         History.LoadDemo();
         Connections.LoadDemo();
+        Skills.LoadDemo(skillEditor);
         UpdateToolsStatus();
         foreach (var item in History.Items) Recents.Add(item);
         UpdatePageTitle();

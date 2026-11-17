@@ -132,3 +132,97 @@ public class RepoPolicyTests
         Assert.DoesNotContain("repository_work", withoutRepos);
     }
 }
+
+public class SkillTests
+{
+    private static string TempRoot()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"hark-skills-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        return root;
+    }
+
+    [Theory]
+    [InlineData("release-notes", true)]
+    [InlineData("sonarqube-coverage-boost", true)]
+    [InlineData("a1", true)]
+    [InlineData("Release-Notes", false)]
+    [InlineData("release notes", false)]
+    [InlineData("release--notes", false)]
+    [InlineData("-release", false)]
+    [InlineData("", false)]
+    public void Validates_names(string name, bool ok) => Assert.Equal(ok, SkillFile.CheckName(name) is null);
+
+    [Fact]
+    public void Suggests_a_name_from_free_text() => Assert.Equal("release-notes-v2", SkillFile.Slug("  Release Notes (v2)! "));
+
+    [Fact]
+    public void Reads_plain_quoted_and_block_front_matter()
+    {
+        var text = "---\r\nname: coverage-boost\r\ndescription: >\r\n  Raises unit test coverage\r\n  for a .NET project.\r\nargument-hint: '<project>'\r\nallowed-tools: shell\r\n---\r\n\r\n# Steps\r\n1. Run tests.\r\n";
+        var parsed = SkillFile.Parse(text);
+        Assert.Equal("coverage-boost", parsed.Fields["name"]);
+        Assert.Equal("Raises unit test coverage for a .NET project.", parsed.Fields["description"]);
+        Assert.Equal("<project>", parsed.Fields["argument-hint"]);
+        Assert.Equal("shell", parsed.Fields["allowed-tools"]);
+        Assert.Equal("# Steps\n1. Run tests.", parsed.Body);
+    }
+
+    [Fact]
+    public void Creates_lists_and_updates_a_skill_keeping_other_front_matter()
+    {
+        var root = TempRoot();
+        var file = SkillLibrary.Save(new SkillDraft("release-notes", "Writes release notes: short, \"plain\" English.", "<version>", "# Release notes\nList changes."), null, root);
+
+        var listed = Assert.Single(SkillLibrary.Scan(root));
+        Assert.Equal("release-notes", listed.Name);
+        Assert.Equal("Writes release notes: short, \"plain\" English.", listed.Description);
+        Assert.Equal("<version>", listed.ArgumentHint);
+        Assert.True(listed.Editable);
+
+        // Someone adds front matter by hand; an update from the app must keep it.
+        File.WriteAllText(file, File.ReadAllText(file).Replace("---\n\n", "allowed-tools:\n  - shell\n  - read\n---\n\n"));
+        SkillLibrary.Save(new SkillDraft("release-notes", "Writes release notes.", null, "# Release notes\nGroup by feature."), file);
+
+        var parsed = SkillFile.Parse(File.ReadAllText(file));
+        Assert.Equal("Writes release notes.", parsed.Fields["description"]);
+        Assert.False(parsed.Fields.ContainsKey("argument-hint"));
+        Assert.Contains("  - read", File.ReadAllText(file));
+        Assert.Equal("# Release notes\nGroup by feature.", parsed.Body);
+        Assert.False(File.Exists(file + ".tmp"));
+    }
+
+    [Fact]
+    public void Refuses_duplicates_and_incomplete_drafts()
+    {
+        var root = TempRoot();
+        SkillLibrary.Save(new SkillDraft("one", "Does one thing.", null, "Do it."), null, root);
+        Assert.Throws<ArgumentException>(() => SkillLibrary.Save(new SkillDraft("one", "Again.", null, "Do it."), null, root));
+        Assert.Throws<ArgumentException>(() => SkillLibrary.Save(new SkillDraft("Bad Name", "x", null, "y"), null, root));
+        Assert.Throws<ArgumentException>(() => SkillLibrary.Save(new SkillDraft("two", " ", null, "y"), null, root));
+        Assert.Throws<ArgumentException>(() => SkillLibrary.Save(new SkillDraft("two", "x", null, ""), null, root));
+    }
+
+    [Fact]
+    public void Matches_a_slash_command_to_a_skill()
+    {
+        SkillInfo[] skills = [new("release-notes", "d", null, "Personal", null, true)];
+        var match = SkillLibrary.MatchCommand("/Release-Notes for 2.4\nthanks", skills);
+        Assert.NotNull(match);
+        Assert.Equal("release-notes", match.Value.Skill.Name);
+        Assert.Equal("for 2.4\nthanks", match.Value.Arguments);
+        Assert.Equal("", SkillLibrary.MatchCommand("/release-notes", skills)!.Value.Arguments);
+        Assert.Null(SkillLibrary.MatchCommand("/unknown thing", skills));
+        Assert.Null(SkillLibrary.MatchCommand("release-notes", skills));
+    }
+
+    [Fact]
+    public void Inline_prompt_carries_the_instructions_and_request()
+    {
+        var skill = new SkillInfo("release-notes", "d", null, "Personal", @"C:\x\release-notes\SKILL.md", true);
+        var prompt = SkillLibrary.InlinePrompt(skill, "---\nname: release-notes\n---\n\nGroup by feature.", "for 2.4");
+        Assert.Contains("Group by feature.", prompt);
+        Assert.EndsWith("for 2.4", prompt);
+        Assert.DoesNotContain("name: release-notes", prompt);
+    }
+}

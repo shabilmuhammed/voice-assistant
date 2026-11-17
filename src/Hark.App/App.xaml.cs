@@ -69,7 +69,8 @@ public partial class App : Application
         _window.Show();
         if (demo)
         {
-            _main.LoadDemo(PageArg(e.Args), approvals: e.Args.Contains("--demo-approvals"));
+            _main.LoadDemo(PageArg(e.Args), approvals: e.Args.Contains("--demo-approvals"), skillEditor: e.Args.Contains("--demo-skill-editor"));
+            if (e.Args.Contains("--demo-slash")) _main.Chat.Input = "/re";
             if (e.Args.Contains("--demo-empty"))
             {
                 _main.Chat.Messages.Clear();
@@ -109,7 +110,7 @@ public partial class App : Application
         {
             if (_window is null || _main is null) return;
             await Task.Delay(1500);
-            for (var page = 0; page < 4; page++)
+            for (var page = 0; page <= MainViewModel.SettingsPage; page++)
             {
                 _main.SelectedNavIndex = page;
                 await Task.Delay(700);

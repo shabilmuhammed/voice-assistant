@@ -76,6 +76,6 @@ public sealed partial class HistoryViewModel(MainViewModel main) : ObservableObj
         main.Store.DeleteConversation(row.Conversation.Id);
         Refresh();
         main.RefreshRecents();
-        main.SelectedNavIndex = 1;
+        main.SelectedNavIndex = MainViewModel.HistoryPage;
     }
 }

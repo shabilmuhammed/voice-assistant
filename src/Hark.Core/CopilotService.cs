@@ -30,7 +30,11 @@ public sealed record SessionOptions(
     string? ResumeSessionId,
     string? WorkingDirectory,
     string? Instructions,
-    IReadOnlyList<string>? AdditionalDirectories = null);
+    IReadOnlyList<string>? AdditionalDirectories = null,
+    IReadOnlyList<string>? SkillDirectories = null);
+
+/// <summary>How a skill run went. TurnStarted is false when nothing was sent to the model.</summary>
+public sealed record SkillRun(bool TurnStarted, string? Message, string Route);
 
 public abstract record ChatEvent;
 public sealed record TextDelta(string MessageId, string Text) : ChatEvent;
@@ -105,6 +109,49 @@ public sealed class CopilotService : IAsyncDisposable
             m.Capabilities?.Supports?.Vision)).ToList();
     }
 
+    /// <summary>
+    /// Every skill the Copilot runtime can see: personal (~/.copilot/skills), built-in, plugin and the given folders.
+    /// Returns null when not connected or the runtime cannot be asked, so the caller can fall back to reading the folder itself.
+    /// </summary>
+    public async Task<IReadOnlyList<SkillInfo>?> DiscoverSkillsAsync(IReadOnlyList<string> skillDirectories)
+    {
+        var client = _client;
+        if (client is null) return null;
+        try
+        {
+            var found = await client.Rpc.Skills.DiscoverAsync(null, skillDirectories.ToList(), null, null);
+            var list = new List<SkillInfo>();
+            foreach (var skill in found.Skills)
+            {
+                if (skill.UserInvocable == false) continue;
+                var source = SourceLabel(skill.Source.ToString());
+                var path = skill.Path;
+                var editable = source is "Personal" or "Project" or "Custom" && !string.IsNullOrEmpty(path) && File.Exists(path);
+                var name = string.IsNullOrWhiteSpace(skill.CommandName) ? skill.Name : skill.CommandName;
+                list.Add(new SkillInfo(name, skill.Description ?? "", string.IsNullOrWhiteSpace(skill.ArgumentHint) ? null : skill.ArgumentHint,
+                    source, string.IsNullOrEmpty(path) ? null : path, editable));
+            }
+            foreach (var error in found.Errors ?? []) Log.Info($"Skill could not be loaded: {error}");
+            return list;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Asking Copilot for its skills failed; reading the skills folder instead.", ex);
+            return null;
+        }
+    }
+
+    private static string SourceLabel(string? source) => (source ?? "").ToLowerInvariant() switch
+    {
+        var s when s.StartsWith("personal") => "Personal",
+        "project" or "inherited" => "Project",
+        "builtin" or "built-in" => "Built-in",
+        "plugin" => "Plugin",
+        "mcp" => "Tool server",
+        "" => "Personal",
+        _ => "Custom",
+    };
+
     /// <summary>Starts a new session, or resumes one when a session id is given and still exists.</summary>
     public async Task<ChatSession> OpenSessionAsync(SessionOptions options, Func<ToolApprovalRequest, Task<ToolApproval>> approve)
     {
@@ -142,6 +189,11 @@ public sealed class CopilotService : IAsyncDisposable
             config.WorkingDirectory = options.WorkingDirectory;
         var extra = options.AdditionalDirectories?.Where(Directory.Exists).ToList();
         if (extra is { Count: > 0 }) config.AdditionalDirectories = extra;
+        if (options.SkillDirectories is { Count: > 0 } skillRoots)
+        {
+            config.EnableSkills = true;
+            config.SkillDirectories = skillRoots.ToList();
+        }
         if (!string.IsNullOrWhiteSpace(options.Instructions))
             config.SystemMessage = new SystemMessageConfig { Mode = SystemMessageMode.Append, Content = options.Instructions };
     }
@@ -211,6 +263,58 @@ public sealed class ChatSession : IAsyncDisposable
             Log.Error("Reading MCP server status failed", ex);
         }
         return problems;
+    }
+
+    /// <summary>
+    /// Runs a skill the way a slash command does in Copilot. If the runtime will not run it, the skill's
+    /// instructions are sent with the request instead, so the user still gets the skill's behaviour.
+    /// </summary>
+    public async Task<SkillRun> RunSkillAsync(SkillInfo skill, string arguments, IReadOnlyList<string>? attachments)
+    {
+        var session = _session ?? throw new InvalidOperationException("Session is closed.");
+        try
+        {
+            var result = await session.Rpc.Commands.InvokeAsync(skill.Name, arguments);
+            switch (result)
+            {
+                case SlashCommandInvocationResultAgentPrompt prompt when !string.IsNullOrWhiteSpace(prompt.Prompt):
+                    Log.Info($"Skill {skill.Name}: run by Copilot as a slash command.");
+                    await SendAsync(prompt.Prompt, attachments);
+                    return new SkillRun(true, prompt.Notice, "runtime");
+                case SlashCommandInvocationResultText text:
+                    Log.Info($"Skill {skill.Name}: Copilot answered directly.");
+                    return new SkillRun(false, text.Text, "runtime");
+                case SlashCommandInvocationResultCompleted done:
+                    Log.Info($"Skill {skill.Name}: Copilot completed it without a turn.");
+                    return new SkillRun(false, done.Message ?? $"/{skill.Name} done.", "runtime");
+                default:
+                    Log.Info($"Skill {skill.Name}: unexpected result {result?.GetType().Name ?? "null"}; sending its instructions instead.");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Skill {skill.Name}: Copilot could not run it as a slash command; sending its instructions instead.", ex);
+        }
+
+        var content = SkillLibrary.Load(skill);
+        if (content.Length == 0)
+            return new SkillRun(false, $"The \"{skill.Name}\" skill could not be run and its file could not be read.", "failed");
+        await SendAsync(SkillLibrary.InlinePrompt(skill, content, arguments), attachments);
+        return new SkillRun(true, null, "inline");
+    }
+
+    /// <summary>Makes the live session pick up skills that were created or changed on disk.</summary>
+    public async Task ReloadSkillsAsync()
+    {
+        try
+        {
+            if (_session is { } session) await session.Rpc.Skills.ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Reloading skills in the session failed", ex);
+        }
     }
 
     public Task AbortAsync() => _session?.AbortAsync() ?? Task.CompletedTask;

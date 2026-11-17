@@ -15,6 +15,7 @@
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:ChatViewModel}"><v:ChatView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:HistoryViewModel}"><v:HistoryView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SkillsViewModel}"><v:SkillsView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:ConnectionsViewModel}"><v:ConnectionsView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><v:SettingsView /></DataTemplate>
 
@@ -61,6 +62,9 @@
                             </ListBoxItem>
                             <ListBoxItem AutomationProperties.Name="History">
                                 <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE81C;" Margin="0,0,11,0" /><TextBlock Text="History" VerticalAlignment="Center" /></StackPanel>
+                            </ListBoxItem>
+                            <ListBoxItem AutomationProperties.Name="Skills">
+                                <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE945;" Margin="0,0,11,0" /><TextBlock Text="Skills" VerticalAlignment="Center" /></StackPanel>
                             </ListBoxItem>
                             <ListBoxItem AutomationProperties.Name="Connections">
                                 <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE71B;" Margin="0,0,11,0" /><TextBlock Text="Connections" VerticalAlignment="Center" /></StackPanel>

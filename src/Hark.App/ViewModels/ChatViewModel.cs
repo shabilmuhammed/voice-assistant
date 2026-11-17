@@ -36,6 +36,8 @@ public sealed partial class ChatViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(SendOrStopCommand))]
     private string _input = "";
 
+    partial void OnInputChanged(string value) => UpdateSlash();
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SendCommand))]
     [NotifyCanExecuteChangedFor(nameof(StopCommand))]
@@ -69,6 +71,117 @@ public sealed partial class ChatViewModel : ObservableObject
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public sealed record Suggestion(string Title, string Detail, string Prompt);
+
+    // ---- the "/" menu ---------------------------------------------------------------
+
+    /// <summary>Skills matching what follows "/" in the message box.</summary>
+    public ObservableCollection<SkillInfo> SlashMatches { get; } = new();
+
+    [ObservableProperty]
+    private bool _isSlashOpen;
+
+    [ObservableProperty]
+    private int _slashIndex;
+
+    [ObservableProperty]
+    private bool _hasSlashMatches;
+
+    private string? _slashDismissedFor;
+
+    /// <summary>The highlighted skill row, or -1 while the "Create a skill" row is highlighted.</summary>
+    public int SlashListIndex => SlashIndex < SlashMatches.Count ? SlashIndex : -1;
+
+    public bool IsCreateHighlighted => IsSlashOpen && SlashIndex >= SlashMatches.Count;
+
+    public string SlashEmptyText => $"No skill matches \u201C{Input}\u201D.";
+
+    partial void OnSlashIndexChanged(int value) => RaiseSlashHighlight();
+
+    partial void OnIsSlashOpenChanged(bool value) => RaiseSlashHighlight();
+
+    private void RaiseSlashHighlight()
+    {
+        OnPropertyChanged(nameof(SlashListIndex));
+        OnPropertyChanged(nameof(IsCreateHighlighted));
+    }
+
+    /// <summary>Opens, filters or closes the menu as the message changes. Open while the message is "/" plus a partial name.</summary>
+    private void UpdateSlash()
+    {
+        var text = Input;
+        var typingCommand = text.StartsWith('/') && text.IndexOfAny([' ', '\n', '\r', '\t']) < 0;
+        if (!typingCommand || text == _slashDismissedFor)
+        {
+            IsSlashOpen = false;
+            if (!typingCommand) _slashDismissedFor = null;
+            return;
+        }
+
+        var query = text[1..];
+        var matches = _main.Skills.Items
+            .Select(s => (Skill: s, Rank:
+                s.Name.StartsWith(query, StringComparison.OrdinalIgnoreCase) ? 0 :
+                s.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ? 1 :
+                s.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ? 2 : -1))
+            .Where(m => m.Rank >= 0)
+            .OrderBy(m => m.Rank).ThenBy(m => m.Skill.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(m => m.Skill)
+            .ToList();
+
+        SlashMatches.Clear();
+        foreach (var skill in matches) SlashMatches.Add(skill);
+        HasSlashMatches = SlashMatches.Count > 0;
+        OnPropertyChanged(nameof(SlashEmptyText));
+        SlashIndex = 0;
+        IsSlashOpen = true;
+        RaiseSlashHighlight();
+    }
+
+    /// <summary>Moves the highlight with the arrow keys. The last row is "Create a skill".</summary>
+    public void MoveSlash(int step)
+    {
+        if (!IsSlashOpen) return;
+        var rows = SlashMatches.Count + 1;
+        SlashIndex = ((SlashIndex + step) % rows + rows) % rows;
+    }
+
+    /// <summary>Enter or Tab on the highlighted row.</summary>
+    public void AcceptSlash()
+    {
+        if (!IsSlashOpen) return;
+        if (SlashIndex < SlashMatches.Count) PickSkill(SlashMatches[SlashIndex]);
+        else CreateSkillFromMenu();
+    }
+
+    public void DismissSlash()
+    {
+        _slashDismissedFor = Input;
+        IsSlashOpen = false;
+    }
+
+    [RelayCommand]
+    private void PickSkill(SkillInfo? skill)
+    {
+        if (skill is null) return;
+        Input = "/" + skill.Name + " ";
+        IsSlashOpen = false;
+        FocusRequested?.Invoke();
+    }
+
+    [RelayCommand]
+    private void CreateSkillFromMenu()
+    {
+        IsSlashOpen = false;
+        Input = "";
+        _main.CreateSkill();
+    }
+
+    /// <summary>After a skill is created or edited: the live chat picks it up, and an open menu shows it.</summary>
+    public async Task ReloadSkillsAsync()
+    {
+        if (_session is not null) await _session.ReloadSkillsAsync();
+        if (IsSlashOpen) UpdateSlash();
+    }
 
     /// <summary>Starting points shown on an empty chat.</summary>
     public IReadOnlyList<Suggestion> Suggestions { get; } =
@@ -241,7 +354,8 @@ public sealed partial class ChatViewModel : ObservableObject
                 var options = new SessionOptions(SelectedModel?.Id, mcp, _resumeSessionId,
                     hasRepos ? repos : null,
                     RepoPolicy.Instructions(hasRepos ? repos : null, output),
-                    [output]);
+                    [output, SkillLibrary.PersonalFolder],
+                    [SkillLibrary.PersonalFolder]);
                 _session = await _main.Copilot.OpenSessionAsync(options, ApproveAsync);
                 _session.Event += OnChatEvent;
                 if (_resumeSessionId is not null && !_session.Resumed)
@@ -255,7 +369,23 @@ public sealed partial class ChatViewModel : ObservableObject
                 ? $"{prompt}\n\n(A capture of my whole screen is attached. The window in front is titled \"{shot.ActiveWindowTitle}\".)"
                 : shot is not null ? $"{prompt}\n\n(A capture of my whole screen is attached.)" : prompt;
             _outputBefore = SnapshotOutput();
-            await _session.SendAsync(text, files.Count == 0 ? null : files);
+            if (SkillLibrary.MatchCommand(prompt, _main.Skills.Items) is { } call)
+            {
+                var arguments = text.Length > prompt.Length ? call.Arguments + text[prompt.Length..] : call.Arguments;
+                Status = $"Running /{call.Skill.Name}…";
+                var run = await _session.RunSkillAsync(call.Skill, arguments, files.Count == 0 ? null : files);
+                if (run.Message is { Length: > 0 } message) Add(new NoteVm(message));
+                if (!run.TurnStarted)
+                {
+                    IsBusy = false;
+                    Status = "";
+                    TurnEnded?.Invoke(null);
+                }
+            }
+            else
+            {
+                await _session.SendAsync(text, files.Count == 0 ? null : files);
+            }
         }
         catch (Exception ex)
         {
