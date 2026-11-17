@@ -15,11 +15,11 @@
                         </StackPanel>
                     </Button>
                     <Button DockPanel.Dock="Right" Style="{StaticResource H.Ghost}" Content="Open folder" Command="{Binding OpenFolderCommand}" Margin="0,0,8,0" />
-                    <TextBlock Style="{StaticResource Secondary}" VerticalAlignment="Center" Margin="4,0,16,0">
-                        <Run Text="Type / in a chat to use a skill. Skills you create are saved in" />
-                        <Run Text="{Binding Folder, Mode=OneWay}" FontFamily="{StaticResource MonoFont}" FontSize="12" />
-                        <Run Text=", the personal skills folder Copilot uses." />
-                    </TextBlock>
+                    <StackPanel VerticalAlignment="Center" Margin="4,0,16,0">
+                        <TextBlock Style="{StaticResource Secondary}" Text="Type / in a chat to use a skill. New skills are saved in your personal Copilot skills folder:" />
+                        <TextBlock Text="{Binding Folder}" FontFamily="{StaticResource MonoFont}" FontSize="12" Foreground="{DynamicResource H.Ink2}"
+                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding Folder}" Margin="0,2,0,0" />
+                    </StackPanel>
                 </DockPanel>
 
                 <Border Background="{DynamicResource H.OkSoft}" CornerRadius="10" Padding="13,9" Margin="0,0,0,10"

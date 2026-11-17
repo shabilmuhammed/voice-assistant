@@ -122,7 +122,8 @@ public sealed partial class ChatViewModel : ObservableObject
             .Select(s => (Skill: s, Rank:
                 s.Name.StartsWith(query, StringComparison.OrdinalIgnoreCase) ? 0 :
                 s.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ? 1 :
-                s.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ? 2 : -1))
+                // Descriptions are searched only once a few letters are typed, so "/re" does not match every "are".
+                query.Length >= 3 && s.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ? 2 : -1))
             .Where(m => m.Rank >= 0)
             .OrderBy(m => m.Rank).ThenBy(m => m.Skill.Name, StringComparer.OrdinalIgnoreCase)
             .Select(m => m.Skill)
