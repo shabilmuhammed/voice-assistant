@@ -10,3 +10,7 @@ obj/
 
 # downloaded voice models
 models/
+
+# Copilot runtime downloaded by hand for offline builds (see copilot-runtime/README.md)
+copilot-runtime/*
+!copilot-runtime/README.md

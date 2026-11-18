@@ -10,4 +10,63 @@
     <PackageReference Include="GitHub.Copilot.SDK" Version="1.0.29" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" />
   </ItemGroup>
+
+  <!--
+    Offline Copilot runtime. The build downloads the Copilot runtime from github.com, which some company networks block.
+    Download github-copilot-<version>-win32-x64.tgz in a browser (see copilot-runtime\README.md) and put it in the
+    copilot-runtime folder at the root of the repository. The build then checks it against the published checksum and
+    unpacks it where the Copilot SDK keeps its download, so the SDK finds it and downloads nothing.
+  -->
+  <PropertyGroup>
+    <CopilotLocalRuntimeDir Condition="'$(CopilotLocalRuntimeDir)' == ''">$(MSBuildThisFileDirectory)..\..\copilot-runtime\</CopilotLocalRuntimeDir>
+  </PropertyGroup>
+
+  <Target Name="UseLocalCopilotRuntime" BeforeTargets="_DownloadCopilotCli"
+          Condition="'$(TargetFramework)' != '' And '$(_CopilotPlatform)' != '' And Exists('$(CopilotLocalRuntimeDir)github-copilot-$(CopilotCliVersion)-$(_CopilotPlatform).tgz')">
+    <PropertyGroup>
+      <_LocalCopilotName>github-copilot-$(CopilotCliVersion)-$(_CopilotPlatform).tgz</_LocalCopilotName>
+      <_LocalCopilotNameRegex>$([System.Text.RegularExpressions.Regex]::Escape('$(_LocalCopilotName)'))</_LocalCopilotNameRegex>
+      <_LocalCopilotArchive>$(CopilotLocalRuntimeDir)$(_LocalCopilotName)</_LocalCopilotArchive>
+      <_LocalCopilotCache>$(IntermediateOutputPath)copilot-cli\$(CopilotCliVersion)\$(_CopilotPlatform)</_LocalCopilotCache>
+      <_LocalCopilotMarker>$(_LocalCopilotCache)\.copilot-runtime-complete</_LocalCopilotMarker>
+      <_LocalCopilotNeeded Condition="!Exists('$(_LocalCopilotMarker)') Or !Exists('$(_LocalCopilotCache)\prebuilds\$(_CopilotPlatform)\runtime.node')">true</_LocalCopilotNeeded>
+      <!-- Published checksum of the version this repository pins; a SHA256SUMS.txt next to the archive is used instead when present. -->
+      <_LocalCopilotExpected Condition="'$(_LocalCopilotName)' == 'github-copilot-1.0.107-win32-x64.tgz'">4C257362D2B2A385C6A639B5DE028524E2498CE677577AFC704D4BCB5DB4CA5D</_LocalCopilotExpected>
+    </PropertyGroup>
+
+    <ReadLinesFromFile File="$(CopilotLocalRuntimeDir)SHA256SUMS.txt" Condition="'$(_LocalCopilotNeeded)' == 'true' And Exists('$(CopilotLocalRuntimeDir)SHA256SUMS.txt')">
+      <Output TaskParameter="Lines" ItemName="_LocalCopilotSumLine" />
+    </ReadLinesFromFile>
+    <ItemGroup Condition="'$(_LocalCopilotNeeded)' == 'true'">
+      <_LocalCopilotSum Include="@(_LocalCopilotSumLine)"
+                        Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Identity)', '^[0-9a-fA-F]{64}[\t ]+\*?$(_LocalCopilotNameRegex)[\t ]*$'))" />
+    </ItemGroup>
+    <PropertyGroup Condition="'$(_LocalCopilotNeeded)' == 'true' And '@(_LocalCopilotSum)' != ''">
+      <_LocalCopilotSumValue>@(_LocalCopilotSum)</_LocalCopilotSumValue>
+      <_LocalCopilotExpected>$([System.String]::Copy('$(_LocalCopilotSumValue)').Substring(0, 64).ToUpperInvariant())</_LocalCopilotExpected>
+    </PropertyGroup>
+    <Error Condition="'$(_LocalCopilotNeeded)' == 'true' And '$(_LocalCopilotExpected)' == ''"
+           Text="No checksum is known for $(_LocalCopilotName). Download SHA256SUMS.txt from the same release page and put it next to the archive in $(CopilotLocalRuntimeDir)." />
+
+    <GetFileHash Files="$(_LocalCopilotArchive)" Algorithm="SHA256" Condition="'$(_LocalCopilotNeeded)' == 'true'">
+      <Output TaskParameter="Items" ItemName="_LocalCopilotHash" />
+    </GetFileHash>
+    <PropertyGroup Condition="'$(_LocalCopilotNeeded)' == 'true'">
+      <_LocalCopilotActual>@(_LocalCopilotHash->'%(FileHash)')</_LocalCopilotActual>
+      <_LocalCopilotActual>$([System.String]::Copy('$(_LocalCopilotActual)').ToUpperInvariant())</_LocalCopilotActual>
+    </PropertyGroup>
+    <Error Condition="'$(_LocalCopilotNeeded)' == 'true' And '$(_LocalCopilotActual)' != '$(_LocalCopilotExpected)'"
+           Text="$(_LocalCopilotArchive) does not match the published checksum (expected $(_LocalCopilotExpected), got $(_LocalCopilotActual)). Download it again." />
+
+    <PropertyGroup>
+      <_LocalCopilotTar Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(SystemRoot)\System32\tar.exe</_LocalCopilotTar>
+      <_LocalCopilotTar Condition="'$(_LocalCopilotTar)' == ''">tar</_LocalCopilotTar>
+    </PropertyGroup>
+    <Message Importance="high" Text="Using the Copilot runtime from $(_LocalCopilotArchive) instead of downloading it." Condition="'$(_LocalCopilotNeeded)' == 'true'" />
+    <RemoveDir Directories="$(_LocalCopilotCache)" Condition="'$(_LocalCopilotNeeded)' == 'true'" />
+    <MakeDir Directories="$(_LocalCopilotCache)" Condition="'$(_LocalCopilotNeeded)' == 'true'" />
+    <Exec Command="&quot;$(_LocalCopilotTar)&quot; -xzf &quot;$(_LocalCopilotArchive)&quot; --strip-components=1 -C &quot;$(_LocalCopilotCache)&quot;"
+          Condition="'$(_LocalCopilotNeeded)' == 'true'" />
+    <WriteLinesToFile File="$(_LocalCopilotMarker)" Lines="$(CopilotCliVersion)" Overwrite="true" Condition="'$(_LocalCopilotNeeded)' == 'true'" />
+  </Target>
 </Project>

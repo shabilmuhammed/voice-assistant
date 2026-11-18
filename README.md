@@ -33,7 +33,15 @@ A Windows desktop app that puts GitHub Copilot and your MCP tools in one window,
 Nothing else needs installing.
 
 **From Visual Studio:** open `Hark.sln`, set `Hark.App` as the startup project, press Ctrl+F5. Needs the .NET 10 SDK.
-The first build downloads the Copilot runtime (about 90 MB) from GitHub.
+The first build downloads the Copilot runtime (about 90 MB) from GitHub. If your network blocks that download
+(`error MSB3923: Failed to download file ...copilot-cli...`), download the file in your browser instead: see
+`copilot-runtime/README.md`.
+
+**To share the app:** publish it, then zip the whole `out\hark` folder. `MarTechChat.exe` needs the files next to it.
+
+```bash
+dotnet publish src/Hark.App/Hark.App.csproj -c Release -r win-x64 --self-contained true -o out/hark
+```
 
 ## First start
 

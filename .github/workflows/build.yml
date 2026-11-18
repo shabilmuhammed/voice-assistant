@@ -18,11 +18,19 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      # Use the Copilot runtime the way a network that blocks the build's own download does (copilot-runtime/README.md),
+      # so that path is tested on Windows. The publish below points the SDK's download at an address that cannot work.
+      - name: Put the Copilot runtime in copilot-runtime/
+        shell: pwsh
+        run: |
+          $v = "1.0.107"
+          Invoke-WebRequest "https://github.com/github/copilot-cli/releases/download/v$v/github-copilot-$v-win32-x64.tgz" -OutFile "copilot-runtime/github-copilot-$v-win32-x64.tgz"
+
       - name: Test
         run: dotnet test tests/Hark.Core.Tests/Hark.Core.Tests.csproj -c Release
 
       - name: Publish app (self-contained, no .NET install needed on the laptop)
-        run: dotnet publish src/Hark.App/Hark.App.csproj -c Release -r win-x64 --self-contained true -o out/hark
+        run: dotnet publish src/Hark.App/Hark.App.csproj -c Release -r win-x64 --self-contained true -o out/hark -p:CopilotCliReleaseBaseUrl=https://download.invalid/
 
       - name: Check no voice files reach the app (voice is parked in parked/voice)
         shell: pwsh
