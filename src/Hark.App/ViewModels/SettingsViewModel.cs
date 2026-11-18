@@ -20,22 +20,28 @@ public sealed partial class SettingsViewModel : ObservableObject
         _main = main;
         _closeToTray = main.Settings.CloseToTray;
         _approval = Approvals.FirstOrDefault(a => a.Mode == main.Settings.ApprovalMode) ?? Approvals[0];
-        _alsoWakeOn = string.Join(", ", main.Settings.AlsoWakeOn);
-        _wakeOnWords = main.Settings.WakeOnRecognisedWords;
         _mcpConfigPath = main.Settings.McpConfigPath ?? "";
         _reposRoot = main.Settings.ReposRoot ?? "";
         _reposNote = DescribeRepos(_reposRoot);
         _outputFolder = main.Settings.OutputFolder ?? "";
-        _voiceEnabled = main.Settings.VoiceEnabled;
-        _wakePhrase = main.Settings.WakePhrase;
-        _wakeSensitivity = main.Settings.WakeSensitivity;
-        foreach (var mic in Hark.App.Voice.VoiceService.Microphones()) Microphones.Add(mic);
-        _microphone = Microphones.FirstOrDefault(m => m.Device == main.Settings.MicrophoneDevice) ?? Microphones.FirstOrDefault();
         _startWithWindows = ReadStartWithWindows();
         _azureCliFallback = main.Settings.AzureCliFallback;
+        main.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.QuickPromptShortcutAvailable)) OnPropertyChanged(nameof(ShortcutNote));
+        };
         _loading = false;
         if (_azureCliFallback) _ = RefreshAzureCliAsync();
     }
+
+    // ---- quick prompt ----------------------------------------------------------
+
+    public string ShortcutNote => _main.QuickPromptShortcutAvailable
+        ? ""
+        : "Another app is already using Ctrl + Alt + Space, so the shortcut is off. Quick prompt is still in the tray icon's menu.";
+
+    [RelayCommand]
+    private void OpenQuickPrompt() => _main.QuickPrompt.Open();
 
     // ---- Azure CLI fallback ----------------------------------------------------
 
@@ -126,12 +132,6 @@ public sealed partial class SettingsViewModel : ObservableObject
     public string ApprovalExplanation => Approval.Explanation;
 
     [ObservableProperty]
-    private string _alsoWakeOn;
-
-    [ObservableProperty]
-    private bool _wakeOnWords;
-
-    [ObservableProperty]
     private bool _startWithWindows;
 
     [ObservableProperty]
@@ -147,68 +147,6 @@ public sealed partial class SettingsViewModel : ObservableObject
     private string _outputFolder;
 
     public string OutputDefault => AppSettings.DefaultOutputFolder;
-
-    // ---- voice ----
-
-    public ObservableCollection<Hark.App.Voice.Microphone> Microphones { get; } = new();
-
-    [ObservableProperty]
-    private bool _voiceEnabled;
-
-    [ObservableProperty]
-    private string _wakePhrase;
-
-    [ObservableProperty]
-    private int _wakeSensitivity;
-
-    [ObservableProperty]
-    private Hark.App.Voice.Microphone? _microphone;
-
-    [ObservableProperty]
-    private string _voiceNote = "";
-
-    public VoiceViewModel Voice => _main.Voice;
-
-    partial void OnVoiceEnabledChanged(bool value)
-    {
-        if (_loading) return;
-        _main.Settings.VoiceEnabled = value;
-        ApplyVoice();
-    }
-
-    partial void OnWakePhraseChanged(string value)
-    {
-        if (_loading) return;
-        var problem = Hark.App.Voice.VoiceService.CheckWakePhrase(value);
-        if (problem is not null)
-        {
-            VoiceNote = problem;
-            return;
-        }
-        _main.Settings.WakePhrase = value.Trim();
-        ApplyVoice();
-    }
-
-    partial void OnWakeSensitivityChanged(int value)
-    {
-        if (_loading) return;
-        _main.Settings.WakeSensitivity = Math.Clamp(value, 1, 10);
-        ApplyVoice();
-    }
-
-    partial void OnMicrophoneChanged(Hark.App.Voice.Microphone? value)
-    {
-        if (_loading || value is null) return;
-        _main.Settings.MicrophoneDevice = value.Device;
-        ApplyVoice();
-    }
-
-    private void ApplyVoice()
-    {
-        Save();
-        _main.Voice.ApplySettings();
-        VoiceNote = _main.Settings.VoiceEnabled && !_main.Voice.IsRunning ? _main.Voice.StatusText : "";
-    }
 
     [ObservableProperty]
     private string _note = "";
@@ -244,20 +182,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         if (_loading || value is null) return;
         _main.Settings.ApprovalMode = value.Mode;
         Save();
-    }
-
-    partial void OnAlsoWakeOnChanged(string value)
-    {
-        if (_loading) return;
-        _main.Settings.AlsoWakeOn = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-        ApplyVoice();
-    }
-
-    partial void OnWakeOnWordsChanged(bool value)
-    {
-        if (_loading) return;
-        _main.Settings.WakeOnRecognisedWords = value;
-        ApplyVoice();
     }
 
     partial void OnMcpConfigPathChanged(string value)

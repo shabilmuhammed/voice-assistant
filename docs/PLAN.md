@@ -75,8 +75,9 @@ Done:
 - Attachments: files and images by button, drag and drop, or paste.
 - Generated files: saved to a configurable folder and listed in the chat with Open and Show in folder.
 - Screen reading: whole-desktop capture attached to a message, by button or by phrase.
-- Voice: "Hey Chat" wake phrase (configurable, no training), push to talk, on-screen panel, offline speech-to-text.
-  Tested on recorded clips; not yet tested with a real microphone.
+- Voice: "Hey Chat" wake phrase, push to talk, on-screen panel, offline speech-to-text. Parked in `parked/voice`:
+  kept in the repo but not built, not tested in CI and not in the app.
+- Quick prompt: Ctrl+Alt+Space opens a typed prompt in the panel the voice feature used; the answer shows there.
 - Azure CLI fallback: off by default, `az` commands refused unless switched on in Settings; when on, one `az login`
   and the Azure CLI's cached sign-in is reused (repeat logins are refused while it still gives a token).
 - Windows build on GitHub Actions with tests, a zip to download and screenshots of every screen.

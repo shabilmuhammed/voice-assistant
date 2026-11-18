@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Threading;
 using Hark.App.ViewModels;
-using Hark.App.Voice;
+using Hark.App.Views;
 using Hark.Core;
 
 namespace Hark.App;
@@ -12,7 +12,7 @@ public partial class App : Application
     private System.Windows.Forms.NotifyIcon? _tray;
     private MainWindow? _window;
     private MainViewModel? _main;
-    private VoiceOverlay? _overlay;
+    private QuickPromptWindow? _quickPrompt;
     private GlobalHotkey? _hotkeys;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -64,7 +64,7 @@ public partial class App : Application
             _window.Height = 700;
         }
         _main.CaptureScreen = () => ScreenCapture.CaptureAsync(_window);
-        _overlay = new VoiceOverlay(_main.Voice);
+        _quickPrompt = new QuickPromptWindow(_main.QuickPrompt) { StayOpen = demo };
         if (!demo) CreateTray();
         _window.Show();
         if (demo)
@@ -79,8 +79,8 @@ public partial class App : Application
             }
             if (e.Args.Contains("--demo-capture")) _ = DemoCaptureAsync();
             if (e.Args.Contains("--selftest")) _ = SelfTestAsync();
-            var voiceDemo = Array.IndexOf(e.Args, "--demo-voice");
-            if (voiceDemo >= 0 && voiceDemo + 1 < e.Args.Length) _main.Voice.LoadDemo(e.Args[voiceDemo + 1]);
+            var quickDemo = Array.IndexOf(e.Args, "--demo-quick");
+            if (quickDemo >= 0 && quickDemo + 1 < e.Args.Length) _main.QuickPrompt.LoadDemo(e.Args[quickDemo + 1]);
         }
         else
         {
@@ -88,9 +88,8 @@ public partial class App : Application
             try
             {
                 _hotkeys = new GlobalHotkey();
-                _hotkeys.PushToTalk += () => _main.Voice.Toggle();
-                _hotkeys.Escape += () => _main.Voice.Dismiss();
-                _main.Voice.EscapeWanted += on => _hotkeys?.ListenForEscape(on);
+                _hotkeys.QuickPrompt += () => _main.QuickPrompt.Toggle();
+                _main.QuickPromptShortcutAvailable = _hotkeys.QuickPromptAvailable;
             }
             catch (Exception ex)
             {
@@ -138,11 +137,12 @@ public partial class App : Application
             _main.SelectedNavIndex = 0;
             _main.Chat.Messages.Clear();
             await Task.Delay(700);
-            foreach (var mode in new[] { "listening", "working", "answer" })
+            foreach (var mode in new[] { "typing", "working", "answer" })
             {
-                _main.Voice.LoadDemo(mode);
+                _main.QuickPrompt.LoadDemo(mode);
                 await Task.Delay(500);
             }
+            _main.QuickPrompt.DismissCommand.Execute(null);
             await Task.Delay(500);
             Log.Info($"SELFTEST DONE: pressed {pressed} buttons.");
         }
@@ -229,14 +229,10 @@ public partial class App : Application
             var menu = new System.Windows.Forms.ContextMenuStrip();
             menu.Items.Add("Open MarTechChat", null, (_, _) => ShowWindow());
             menu.Items.Add("New chat", null, (_, _) => { ShowWindow(); _main?.Chat.NewChatCommand.Execute(null); });
-            var listen = new System.Windows.Forms.ToolStripMenuItem("Listen for the wake phrase") { CheckOnClick = true };
-            listen.Click += (_, _) =>
-            {
-                if (_main is null) return;
-                _main.Preferences.VoiceEnabled = listen.Checked;
-            };
-            menu.Opening += (_, _) => listen.Checked = _main?.Settings.VoiceEnabled == true;
-            menu.Items.Add(listen);
+            var quick = new System.Windows.Forms.ToolStripMenuItem("Quick prompt") { ShortcutKeyDisplayString = "Ctrl+Alt+Space" };
+            // Opened once the menu has closed, so the menu closing does not take the focus back from the box.
+            quick.Click += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () => _main?.QuickPrompt.Open());
+            menu.Items.Add(quick);
             menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
             menu.Items.Add("Quit", null, (_, _) => Quit());
 
@@ -294,7 +290,7 @@ public partial class App : Application
                 _tray = null;
             }
             _hotkeys?.Dispose();
-            _overlay?.Close();
+            _quickPrompt?.Close();
             if (_main is not null) await _main.ShutdownAsync();
         }
         catch (Exception ex)

@@ -9,7 +9,7 @@ namespace Hark.App.Controls;
 
 /// <summary>
 /// The one expressive element in the app: three soft discs of light drifting inside a circle.
-/// Shown on a new chat and in the voice panel. Stays still when Windows animations are off.
+/// Shown on a new chat and in the quick prompt. Stays still when Windows animations are off.
 /// </summary>
 public sealed class Orb : Grid
 {
@@ -29,7 +29,7 @@ public sealed class Orb : Grid
         IsVisibleChanged += (_, _) => Restart();
     }
 
-    /// <summary>Faster drift, used while Hark is listening.</summary>
+    /// <summary>Faster drift, used while the quick prompt is open for typing.</summary>
     public bool Lively
     {
         get => (bool)GetValue(LivelyProperty);

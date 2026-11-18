@@ -457,10 +457,6 @@
                                                   AutomationProperties.Name="Include my screen with the next message">
                                         <TextBlock Style="{StaticResource Icon}" Text="&#xE7F4;" />
                                     </ToggleButton>
-                                    <Button Style="{StaticResource H.IconButton}" Command="{Binding TalkCommand}"
-                                            ToolTip="Talk (Ctrl + Alt + Space)" AutomationProperties.Name="Talk">
-                                        <TextBlock Style="{StaticResource Icon}" Text="&#xE720;" />
-                                    </Button>
                                 </StackPanel>
                             </DockPanel>
                         </StackPanel>

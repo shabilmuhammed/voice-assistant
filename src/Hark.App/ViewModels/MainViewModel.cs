@@ -27,7 +27,7 @@ public sealed partial class MainViewModel : ObservableObject
         Connections = new ConnectionsViewModel(this);
         Skills = new SkillsViewModel(this);
         Skills.Changed += () => _ = Chat.ReloadSkillsAsync();
-        Voice = new VoiceViewModel(this);
+        QuickPrompt = new QuickPromptViewModel(this);
         Preferences = new SettingsViewModel(this);
         _currentPage = Chat;
         Chat.PropertyChanged += (_, e) =>
@@ -44,7 +44,11 @@ public sealed partial class MainViewModel : ObservableObject
     public HistoryViewModel History { get; }
     public ConnectionsViewModel Connections { get; }
     public SettingsViewModel Preferences { get; }
-    public VoiceViewModel Voice { get; }
+    public QuickPromptViewModel QuickPrompt { get; }
+
+    /// <summary>False when another app already owns Ctrl + Alt + Space.</summary>
+    [ObservableProperty]
+    private bool _quickPromptShortcutAvailable = true;
     public SkillsViewModel Skills { get; }
 
     // Sidebar order. The selection pill and the page shown both follow these numbers.
@@ -147,7 +151,6 @@ public sealed partial class MainViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
-        Voice.ApplySettings();
         Connections.Reload();
         UpdateToolsStatus();
         RefreshRecents();
@@ -225,7 +228,6 @@ public sealed partial class MainViewModel : ObservableObject
 
     public async Task ShutdownAsync()
     {
-        Voice.Shutdown();
         await Chat.CloseSessionAsync();
         await Copilot.DisposeAsync();
     }

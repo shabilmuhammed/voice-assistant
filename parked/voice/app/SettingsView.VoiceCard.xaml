@@ -1,0 +1,88 @@
+<!-- Parked: the Voice card from src/Hark.App/Views/SettingsView.xaml, between the Chat and Folders cards. Not compiled. -->
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+            <TextBlock Text="Voice" Style="{StaticResource GroupLabel}" Margin="4,26,0,8" />
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <Border Style="{StaticResource Row}">
+                        <DockPanel>
+                            <CheckBox DockPanel.Dock="Right" Style="{StaticResource H.Switch}" IsChecked="{Binding VoiceEnabled, Mode=TwoWay}"
+                                      AutomationProperties.Name="Listen for the wake phrase" />
+                            <StackPanel Margin="0,0,16,0">
+                                <TextBlock Text="Listen for the wake phrase" Style="{StaticResource RowTitle}" />
+                                <TextBlock Text="The microphone is processed on this PC only. Nothing is sent until you have spoken a request, and then only the text."
+                                           Style="{StaticResource Secondary}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource Row}">
+                        <DockPanel>
+                            <TextBox DockPanel.Dock="Right" Style="{StaticResource H.Field}" Width="220" VerticalAlignment="Center"
+                                     Text="{Binding WakePhrase, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Wake phrase" />
+                            <StackPanel Margin="0,0,16,0">
+                                <TextBlock Text="Wake phrase" Style="{StaticResource RowTitle}" />
+                                <TextBlock Text="Two plain English words work best. No training is needed." Style="{StaticResource Secondary}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource Row}">
+                        <DockPanel>
+                            <Slider DockPanel.Dock="Right" Width="220" Minimum="1" Maximum="10" TickFrequency="1" IsSnapToTickEnabled="True"
+                                    VerticalAlignment="Center" Value="{Binding WakeSensitivity, Mode=TwoWay}" AutomationProperties.Name="Wake sensitivity" />
+                            <StackPanel Margin="0,0,16,0">
+                                <TextBlock Text="Sensitivity" Style="{StaticResource RowTitle}" />
+                                <TextBlock Text="Left is stricter: fewer accidental wake-ups, but it may miss you. Right wakes more easily." Style="{StaticResource Secondary}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource Row}">
+                        <DockPanel>
+                            <ComboBox DockPanel.Dock="Right" Width="220" ItemsSource="{Binding Microphones}" DisplayMemberPath="Name"
+                                      SelectedItem="{Binding Microphone, Mode=TwoWay}" VerticalAlignment="Center" AutomationProperties.Name="Microphone" />
+                            <TextBlock Text="Microphone" Style="{StaticResource RowTitle}" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource Row}">
+                        <DockPanel>
+                            <CheckBox DockPanel.Dock="Right" Style="{StaticResource H.Switch}" IsChecked="{Binding WakeOnWords, Mode=TwoWay}"
+                                      AutomationProperties.Name="Also wake on recognised words" />
+                            <StackPanel Margin="0,0,16,0">
+                                <TextBlock Text="Also wake on recognised words" Style="{StaticResource RowTitle}" />
+                                <TextBlock Text="MarTechChat transcribes what it hears on this PC and wakes when the words match. It reacts after a short pause and copes better with accents."
+                                           Style="{StaticResource Secondary}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource Row}">
+                        <DockPanel>
+                            <TextBox DockPanel.Dock="Right" Style="{StaticResource H.Field}" Width="220" VerticalAlignment="Center"
+                                     Text="{Binding AlsoWakeOn, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Also wake on" />
+                            <StackPanel Margin="0,0,16,0">
+                                <TextBlock Text="Also wake on" Style="{StaticResource RowTitle}" />
+                                <TextBlock Text="If the check below shows your wake phrase heard as something else, add that here. Separate phrases with commas."
+                                           Style="{StaticResource Secondary}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource Row}">
+                        <DockPanel>
+                            <ProgressBar DockPanel.Dock="Right" Width="220" Height="6" Minimum="0" Maximum="1" VerticalAlignment="Center"
+                                         Value="{Binding Voice.Level, Mode=OneWay}" Foreground="{DynamicResource H.Signal}" Background="{DynamicResource H.Sunken}"
+                                         BorderThickness="0" AutomationProperties.Name="Microphone level" />
+                            <StackPanel Margin="0,0,16,0">
+                                <TextBlock Text="What MarTechChat hears" Style="{StaticResource RowTitle}" />
+                                <TextBlock Text="{Binding Voice.LastHeard}" Style="{StaticResource Secondary}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource LastRow}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Secondary}"
+                                       Text="Ctrl + Alt + Space starts listening without the wake phrase. Esc cancels while MarTechChat is listening." />
+                            <TextBlock Text="{Binding VoiceNote}" TextWrapping="Wrap" FontSize="13" Margin="0,6,0,0" Foreground="{DynamicResource H.Warn}"
+                                       Visibility="{Binding VoiceNote, Converter={StaticResource TextToVisibility}}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+</StackPanel>

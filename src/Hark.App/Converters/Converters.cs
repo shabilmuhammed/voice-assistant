@@ -18,11 +18,15 @@ public sealed class BoolToVisibilityConverter : IValueConverter
         throw new NotSupportedException();
 }
 
-/// <summary>Non-empty string → Visible.</summary>
+/// <summary>Non-empty string → Visible. Pass "invert" as the parameter to flip it.</summary>
 public sealed class TextToVisibilityConverter : IValueConverter
 {
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        string.IsNullOrWhiteSpace(value as string) ? Visibility.Collapsed : Visibility.Visible;
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var has = !string.IsNullOrEmpty(value as string);
+        if (parameter is string s && s.Equals("invert", StringComparison.OrdinalIgnoreCase)) return has ? Visibility.Collapsed : Visibility.Visible;
+        return string.IsNullOrWhiteSpace(value as string) ? Visibility.Collapsed : Visibility.Visible;
+    }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();

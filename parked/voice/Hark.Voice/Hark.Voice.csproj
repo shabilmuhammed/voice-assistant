@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Hark.Voice</RootNamespace>
-    <ModelsDir>$(MSBuildThisFileDirectory)..\..\models\</ModelsDir>
+    <ModelsDir>$(MSBuildThisFileDirectory)..\..\..\models\</ModelsDir>
     <ModelsBase>https://github.com/k2-fsa/sherpa-onnx/releases/download</ModelsBase>
   </PropertyGroup>
   <ItemGroup>

@@ -82,13 +82,9 @@
                                 <Ellipse x:Name="CopilotDot" Width="7" Height="7" Fill="{DynamicResource H.Ok}" VerticalAlignment="Center" Margin="0,0,8,0" />
                                 <TextBlock Text="{Binding ConnectionStatus}" FontSize="12.5" Foreground="{DynamicResource H.Ink2}" TextTrimming="CharacterEllipsis" MaxWidth="220" />
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <StackPanel Orientation="Horizontal">
                                 <Ellipse Width="7" Height="7" Fill="{DynamicResource H.Ok}" VerticalAlignment="Center" Margin="0,0,8,0" />
                                 <TextBlock Text="{Binding ToolsStatus}" FontSize="12.5" Foreground="{DynamicResource H.Ink2}" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse x:Name="VoiceDot" Width="7" Height="7" Fill="{DynamicResource H.Signal}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                <TextBlock Text="{Binding Voice.StatusText}" FontSize="12.5" Foreground="{DynamicResource H.Ink2}" TextTrimming="CharacterEllipsis" MaxWidth="220" />
                             </StackPanel>
                         </StackPanel>
                     </Border>

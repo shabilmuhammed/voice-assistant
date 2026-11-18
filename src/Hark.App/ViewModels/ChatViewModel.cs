@@ -229,9 +229,6 @@ public sealed partial class ChatViewModel : ObservableObject
         if (model is not null) SelectedModel = model;
     }
 
-    [RelayCommand]
-    private void Talk() => _main.Voice.Toggle();
-
     private void Retry(AssistantMessageVm answer)
     {
         if (IsBusy) return;
